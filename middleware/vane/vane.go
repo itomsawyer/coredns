@@ -10,7 +10,8 @@ import (
 )
 
 type Vane struct {
-	Next middleware.Handler
+	Next   middleware.Handler
+	DBHost string
 }
 
 func (d Vane) Name() string { return "vane" }

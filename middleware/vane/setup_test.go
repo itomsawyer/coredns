@@ -1,4 +1,4 @@
-package igw
+package vane
 
 import (
 	//"fmt"
@@ -8,17 +8,47 @@ import (
 	"github.com/mholt/caddy"
 )
 
-func TestSetupDemo(t *testing.T) {
+func TestSetupVane(t *testing.T) {
 	tests := []struct {
-		input string
+		input     string
+		name      string
+		expectErr bool
 	}{
 		// positive
 		{
-			`igw`,
+			`vane { 
+				db  root:@localhost/igw
+			}`,
+			"perfect",
+			false,
+		},
+		{
+			`vane {
+				db 
+			}`,
+			"miss db args",
+			true,
 		},
 	}
 
 	for _, test := range tests {
-		caddy.NewTestController("dns", test.input)
+		c := caddy.NewTestController("dns", test.input)
+		vane, err := parseVane(c)
+
+		if test.expectErr {
+			if err == nil {
+				t.Error(test.name, "expectErr")
+				t.Fail()
+				return
+			}
+		} else {
+			if err != nil {
+				t.Error(test.name, err)
+				t.Fail()
+				return
+			}
+		}
+
+		t.Log("vane:", vane)
 	}
 }

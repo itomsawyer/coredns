@@ -68,6 +68,22 @@ And then `go build` as you would normally do:
 
 This should yield a `coredns` binary.
 
+## Add Custom Middleware Plugin
+
+### Include plugin package
+
+Add your own plugin into core/coredns.go import block
+
+### Edit your plugin priority in Middleware chain
+
+Append your plugin name into ./middleware.cfg
+
+### Auto generate related code
+
+```
+make gen
+```
+
 ## Examples
 
 When starting CoreDNS without any configuration, it loads the `whoami` middleware and starts

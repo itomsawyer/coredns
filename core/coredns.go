@@ -20,7 +20,6 @@ import (
 	_ "github.com/miekg/coredns/middleware/file"
 	_ "github.com/miekg/coredns/middleware/health"
 	_ "github.com/miekg/coredns/middleware/httpproxy"
-	_ "github.com/miekg/coredns/middleware/igw"
 	_ "github.com/miekg/coredns/middleware/kubernetes"
 	_ "github.com/miekg/coredns/middleware/loadbalance"
 	_ "github.com/miekg/coredns/middleware/log"
@@ -31,5 +30,6 @@ import (
 	_ "github.com/miekg/coredns/middleware/root"
 	_ "github.com/miekg/coredns/middleware/secondary"
 	_ "github.com/miekg/coredns/middleware/trace"
+	_ "github.com/miekg/coredns/middleware/vane"
 	_ "github.com/miekg/coredns/middleware/whoami"
 )
