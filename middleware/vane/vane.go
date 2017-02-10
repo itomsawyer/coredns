@@ -1,4 +1,4 @@
-package igw
+package vane
 
 import (
 	"net"
@@ -9,13 +9,13 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Demoer struct {
+type Vane struct {
 	Next middleware.Handler
 }
 
-func (d Demoer) Name() string { return "igw" }
+func (d Vane) Name() string { return "vane" }
 
-func (d Demoer) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (d Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	if len(r.Question) == 0 {
 		return 0, nil
 	}
