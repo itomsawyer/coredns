@@ -44,3 +44,21 @@ func Size(proto string, size int) int {
 	}
 	return size
 }
+
+func ReadClientSubnet(r *dns.Msg) *dns.EDNS0_SUBNET {
+	opt := r.IsEdns0()
+	if opt == nil {
+		return nil
+	}
+
+	for _, o := range opt.Option {
+		switch o.Option() {
+		case dns.EDNS0SUBNET:
+			return o.(*dns.EDNS0_SUBNET)
+		default:
+			continue
+		}
+	}
+
+	return nil
+}
