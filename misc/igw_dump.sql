@@ -142,28 +142,6 @@ LOCK TABLES `domainlink` WRITE;
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `dst_route_view`
---
-
-DROP TABLE IF EXISTS `dst_route_view`;
-/*!50001 DROP VIEW IF EXISTS `dst_route_view`*/;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
-/*!50001 CREATE VIEW `dst_route_view` AS SELECT 
- 1 AS `routeset_id`,
- 1 AS `routeset_name`,
- 1 AS `netlinkset_id`,
- 1 AS `netlinkset_name`,
- 1 AS `route_id`,
- 1 AS `route_priority`,
- 1 AS `route_score`,
- 1 AS `outlink_id`,
- 1 AS `outlink_name`,
- 1 AS `outlink_addr`,
- 1 AS `outlink_typ`*/;
-SET character_set_client = @saved_cs_client;
-
---
 -- Table structure for table `filter`
 --
 
@@ -233,7 +211,7 @@ CREATE TABLE `ipnet` (
   `ip_start` varchar(40) NOT NULL,
   `ip_end` varchar(40) NOT NULL,
   `ipnet` varchar(40) NOT NULL,
-  `mask` int(8) NOT NULL,
+  `mask` int(8) unsigned NOT NULL,
   `priority` int(11) NOT NULL DEFAULT '20',
   `ipset_id` int(64) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -309,7 +287,7 @@ CREATE TABLE `iptable` (
   `ip_start` varchar(40) NOT NULL,
   `ip_end` varchar(40) NOT NULL,
   `ipnet` varchar(40) NOT NULL,
-  `mask` int(8) NOT NULL,
+  `mask` int(8) unsigned NOT NULL,
   `priority` int(11) NOT NULL DEFAULT '20',
   `netlink_id` int(64) DEFAULT NULL,
   PRIMARY KEY (`id`),
@@ -712,23 +690,6 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary view structure for view `the_view`
---
-
-DROP TABLE IF EXISTS `the_view`;
-/*!50001 DROP VIEW IF EXISTS `the_view`*/;
-SET @saved_cs_client     = @@character_set_client;
-SET character_set_client = utf8;
-/*!50001 CREATE VIEW `the_view` AS SELECT 
- 1 AS `ipset_id`,
- 1 AS `ipset_name`,
- 1 AS `domain_pool_id`,
- 1 AS `domain_pool_name`,
- 1 AS `routeset_id`,
- 1 AS `routeset_name`*/;
-SET character_set_client = @saved_cs_client;
-
---
 -- Table structure for table `viewer`
 --
 
@@ -795,24 +756,6 @@ UNLOCK TABLES;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
 /*!50001 VIEW `domain_view` AS select `domain`.`id` AS `domain_id`,`domain`.`domain` AS `domain`,`domain`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `pool_name` from (`domain` join `domain_pool` on((`domain`.`domain_pool_id` = `domain_pool`.`id`))) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `dst_route_view`
---
-
-/*!50001 DROP VIEW IF EXISTS `dst_route_view`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8 */;
-/*!50001 SET character_set_results     = utf8 */;
-/*!50001 SET collation_connection      = utf8_general_ci */;
-/*!50001 CREATE ALGORITHM=UNDEFINED */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `dst_route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,min(`route`.`priority`) AS `route_priority`,max(`route`.`score`) AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`) and (`outlink`.`enable` = 1) and (`route`.`enable` = 1) and (`outlink`.`unavailable` = 0) and (`route`.`unavailable` = 0)) group by `route`.`routeset_id` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -942,24 +885,6 @@ UNLOCK TABLES;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
-
---
--- Final view structure for view `the_view`
---
-
-/*!50001 DROP VIEW IF EXISTS `the_view`*/;
-/*!50001 SET @saved_cs_client          = @@character_set_client */;
-/*!50001 SET @saved_cs_results         = @@character_set_results */;
-/*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = utf8 */;
-/*!50001 SET character_set_results     = utf8 */;
-/*!50001 SET collation_connection      = utf8_general_ci */;
-/*!50001 CREATE ALGORITHM=MERGE */
-/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `the_view` AS select `viewer`.`ipset_id` AS `ipset_id`,`ipset`.`name` AS `ipset_name`,`viewer`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `domain_pool_name`,`viewer`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name` from (((`ipset` join `domain_pool`) join `viewer`) join `routeset`) where ((`ipset`.`id` = `viewer`.`ipset_id`) and (`domain_pool`.`id` = `viewer`.`domain_pool_id`) and (`routeset`.`id` = `viewer`.`routeset_id`) and (`viewer`.`enable` = 1)) */;
-/*!50001 SET character_set_client      = @saved_cs_client */;
-/*!50001 SET character_set_results     = @saved_cs_results */;
-/*!50001 SET collation_connection      = @saved_col_connection */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
@@ -970,4 +895,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-02-10 18:07:06
+-- Dump completed on 2017-02-11 15:57:31
