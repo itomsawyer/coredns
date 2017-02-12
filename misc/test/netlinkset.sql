@@ -1,0 +1,5 @@
+INSERT IGNORE INTO `netlinkset` (`id`,`name`) VALUES (1,"Cook Islands"),(2,"Guatemala"),(3,"Saint Barthélemy"),(4,"French Southern Territories"),(5,"Iraq"),(6,"Brunei"),(7,"Russian Federation"),(8,"Australia"),(9,"Bulgaria"),(10,"Ukraine");
+INSERT IGNORE INTO `netlinkset` (`id`,`name`) VALUES (11,"Australia"),(12,"Tunisia"),(13,"India"),(14,"Dominican Republic"),(15,"Qatar"),(16,"Philippines"),(17,"Myanmar"),(18,"Romania"),(19,"South Africa"),(20,"Cook Islands");
+INSERT IGNORE INTO `netlinkset` (`id`,`name`) VALUES (21,"Malaysia"),(22,"Angola"),(23,"Andorra"),(24,"Jordan"),(25,"Latvia"),(26,"Namibia"),(27,"Armenia"),(28,"Malta"),(29,"Antarctica"),(30,"Tuvalu");
+INSERT IGNORE INTO `netlinkset` (`id`,`name`) VALUES (31,"Angola"),(32,"Nicaragua"),(33,"Maldives"),(34,"Angola"),(35,"Botswana"),(36,"Bahrain"),(37,"Lithuania"),(38,"Bermuda"),(39,"New Caledonia"),(40,"Czech Republic");
+INSERT IGNORE INTO `netlinkset` (`id`,`name`) VALUES (41,"Faroe Islands"),(42,"Heard Island and Mcdonald Islands"),(43,"Guyana"),(44,"Denmark"),(45,"Syria"),(46,"Mongolia"),(47,"American Samoa"),(48,"Tajikistan"),(49,"Peru"),(50,"El Salvador");

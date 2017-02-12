@@ -1,0 +1,11 @@
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (6,1,"10",1),(7,2,"10",6),(8,1,"20",6),(5,1,"20",11),(10,1,"10",1),(3,1,"10",9),(7,2,"20",6),(2,2,"20",19),(7,1,"10",14),(9,2,"10",19);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (6,2,"20",12),(4,2,"20",14),(4,1,"10",11),(7,2,"10",11),(9,2,"20",5),(9,1,"20",3),(9,2,"10",14),(7,1,"10",15),(10,2,"20",12),(6,2,"20",17);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (4,2,"10",5),(6,1,"10",9),(1,2,"20",7),(8,1,"20",4),(4,1,"10",13),(4,1,"10",11),(3,1,"20",18),(6,1,"20",1),(1,1,"10",12),(6,1,"10",11);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (10,1,"20",14),(3,2,"20",5),(6,1,"10",12),(4,2,"10",8),(4,2,"20",12),(10,1,"20",19),(3,2,"10",10),(10,2,"10",1),(9,2,"20",14),(8,2,"20",2);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (2,2,"10",11),(6,2,"10",20),(5,1,"20",17),(3,1,"20",18),(10,1,"10",13),(1,2,"10",9),(2,1,"20",17),(8,1,"20",14),(1,1,"10",8),(4,2,"10",4);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (8,1,"20",11),(5,1,"20",11),(2,1,"10",6),(2,1,"10",7),(6,2,"20",8),(4,2,"20",19),(7,2,"10",14),(4,1,"10",17),(7,2,"20",18),(1,2,"20",5);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (8,2,"10",14),(9,2,"10",12),(7,1,"20",7),(7,1,"20",16),(2,2,"10",1),(9,1,"10",9),(6,2,"20",4),(4,1,"20",16),(5,2,"10",20),(10,2,"10",14);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (5,2,"20",4),(9,1,"20",14),(1,1,"10",13),(9,2,"10",15),(10,2,"20",16),(6,1,"20",9),(6,2,"10",16),(10,2,"10",1),(6,2,"20",3),(6,1,"20",2);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (8,1,"10",3),(4,1,"10",6),(8,2,"20",3),(5,2,"20",1),(7,2,"10",3),(8,1,"10",9),(1,1,"20",5),(1,2,"20",5),(8,1,"10",18),(1,2,"10",5);
+INSERT IGNORE INTO `policy_detail` (`policy_id`,`policy_sequence`,`priority`,`ldns_id`) VALUES (1,2,"20",6),(9,1,"20",3),(1,2,"10",4),(8,1,"10",8),(9,1,"20",13),(2,2,"20",20),(3,1,"10",4),(3,1,"10",19),(7,1,"20",12),(2,1,"20",2);
+

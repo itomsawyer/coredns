@@ -141,7 +141,7 @@ netlinkset_id int(64) not null,
 routeset_id int(64) not null,
 enable bool not null default true,
 priority int not null default 20,
-score int comment "netlink performance index",
+score int not null default 50 comment "netlink performance index",
 unavailable int(16) not null default 0 comment "if other than zero, route is unavailable, each bit indicate different reason",
 primary key(id),
 unique key(netlinkset_id, outlink_id, routeset_id),
@@ -172,7 +172,6 @@ unique key(name)
 create table rrset(
 id int(64) not null auto_increment,
 name varchar(64) not null default "",
-ttl int(32) unsigned not null default 300,
 enable bool not null default true,
 primary key(id)
 )DEFAULT CHARSET=utf8 comment "dns rrset(resource record)";
