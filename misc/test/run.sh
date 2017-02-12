@@ -1,11 +1,12 @@
 #!/bin/bash
 user=root
 pass="-proot"
-db=igw
+db=iwg
 
-mysql -u$user $pass $db < ipset.sql
+mysql -u$user $pass $db < clientset.sql
 mysql -u$user $pass $db < ipnet.sql
 mysql -u$user $pass $db < netlink.sql
+mysql -u$user $pass $db < iptable.sql
 mysql -u$user $pass $db < domain_pool.sql
 mysql -u$user $pass $db < domain.sql
 mysql -u$user $pass $db < netlinkset.sql
@@ -20,3 +21,4 @@ mysql -u$user $pass $db < viewer.sql
 mysql -u$user $pass $db < filter.sql
 mysql -u$user $pass $db < rrset.sql
 mysql -u$user $pass $db < rr.sql
+
