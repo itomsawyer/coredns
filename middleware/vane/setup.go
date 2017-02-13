@@ -84,5 +84,9 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 		return vane.DB.Open(vane.DBHost)
 	})
 
+	c.OnStartup(func() error {
+		return vane.DB.Load()
+	})
+
 	return vane, nil
 }

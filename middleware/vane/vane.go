@@ -18,9 +18,9 @@ type Vane struct {
 	DBHost string
 }
 
-func (d Vane) Name() string { return "vane" }
+func (v Vane) Name() string { return "vane" }
 
-func (d Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var remoteAddr net.IP
 	if len(r.Question) == 0 {
 		return 0, nil
@@ -39,7 +39,12 @@ func (d Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		remoteAddr = subnet.Address
 	}
 
-	fmt.Println(remoteAddr)
+	clientSet, err := v.DB.GetClientSetID(remoteAddr)
+	if err != nil {
+		clientSet = 1
+	}
+
+	fmt.Println("Client Set:", clientSet)
 
 	answer := new(dns.Msg)
 	answer.SetReply(r)

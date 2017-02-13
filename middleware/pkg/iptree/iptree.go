@@ -27,20 +27,6 @@ func (i *IPTree) Add(cidr *net.IPNet, v int) error {
 	return nil
 }
 
-func (i *IPTree) AddByNet(ipstr string, mask int, v int) error {
-	ip := net.ParseIP(ipstr)
-	if ip == nil {
-		return errors.New("ip string invalid format: " + ipstr)
-	}
-
-	if mask < 0 || mask > 32 {
-		return errors.New("ip mask invalid value")
-	}
-
-	i.R.Insert(ipToUint(ip.To4()), mask, v)
-	return nil
-}
-
 func (i *IPTree) AddByString(ipcidr string, v int) error {
 	_, ipnet, err := net.ParseCIDR(ipcidr)
 	if err != nil {

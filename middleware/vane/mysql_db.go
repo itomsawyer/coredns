@@ -1,6 +1,9 @@
 package vane
 
 import (
+	"errors"
+	"fmt"
+	"net"
 	"sync"
 
 	"github.com/miekg/coredns/middleware/pkg/iptree"
@@ -36,7 +39,7 @@ func (db *MySQLDB) Load() error {
 		}
 	}()
 
-	data := new(MySQLData)
+	data := NewMySQLData()
 	err = db.loadClientSet(o, data)
 	if err != nil {
 		return nil
@@ -48,9 +51,19 @@ func (db *MySQLDB) Load() error {
 
 	return nil
 }
+func (db *MySQLDB) GetClientSetID(ip net.IP) (int, error) {
+	if ip == nil {
+		return 0, errors.New("client ip is nil")
+	}
 
-func (db *MySQLDB) GetClientSetID(ip string) (int, error) {
-	id, _, err := db.data.clientSet.GetByString(ip)
+	if db.data == nil {
+		return 0, errors.New("db does not loaded")
+	}
+
+	id, found, err := db.data.clientSet.Get(ip)
+	if !found {
+		return 0, errors.New("ClientSet not found")
+	}
 	return id, err
 }
 
@@ -63,7 +76,7 @@ func (db *MySQLDB) loadClientSet(o orm.Ormer, data *MySQLData) error {
 
 	for _, c := range clientSet {
 		cs = c.(models.ClientSetView)
-		err := data.clientSet.AddByNet(cs.Ipnet, int(cs.Mask), cs.IpnetId)
+		err := data.clientSet.AddByString(fmt.Sprintf("%s/%d", cs.Ipnet, int(cs.Mask)), cs.IpnetId)
 		if err != nil {
 			return err
 		}

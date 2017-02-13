@@ -11,8 +11,8 @@ func TestCreate(t *testing.T) {
 
 func TestExactValues(t *testing.T) {
 	ip := New()
-	ip.AddByNet("1.2.3.4", 32, 1)
-	ip.AddByNet("1.2.3.5", 32, 2)
+	ip.AddByString("1.2.3.4/32", 1)
+	ip.AddByString("1.2.3.5/32", 2)
 	if val, _, _ := ip.GetByString("1.2.3.4"); val != 1 {
 		t.Error("Does not set exact value correctly.")
 	}
@@ -23,7 +23,7 @@ func TestExactValues(t *testing.T) {
 
 func TestCovering(t *testing.T) {
 	ip := New()
-	ip.AddByNet("0.0.0.0", 0, 1)
+	ip.AddByString("0.0.0.0/0", 1)
 	if val, found, _ := ip.GetByString("1.2.3.4"); !found {
 		t.Error("Values within covering value not found.")
 	} else if val != 1 {
@@ -33,8 +33,8 @@ func TestCovering(t *testing.T) {
 
 func TestMultiple(t *testing.T) {
 	ip := New()
-	ip.AddByNet("0.0.0.0", 0, 0)
-	ip.AddByNet("141.212.120.16", 24, 3)
+	ip.AddByString("0.0.0.0/0", 0)
+	ip.AddByString("141.212.120.16/24", 3)
 	if val, found, _ := ip.GetByString("1.2.3.4"); !found {
 		t.Error("Values within covering value not found.")
 	} else if val != 0 {
@@ -43,5 +43,4 @@ func TestMultiple(t *testing.T) {
 	if val, _, _ := ip.GetByString("141.212.120.15"); val != 3 {
 		t.Error("Value within subset not correct")
 	}
-
 }
