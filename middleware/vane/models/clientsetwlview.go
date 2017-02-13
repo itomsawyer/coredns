@@ -8,38 +8,38 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-type NetLink struct {
-	IptableId int    `orm:"pk"`
-	IpStart   string `orm:"size(128)"`
-	IpEnd     string `orm:"size(128)"`
-	Ipnet     string `orm:"size(128)"`
-	Mask      uint8
-	NetLinkId int    `orm:"column(netlink_id)"`
-	Isp       string `orm:"size(128)"`
-	Region    string `orm:"size(128)"`
-	Typ       string `orm:"size(128)"`
+type ClientSetWLView struct {
+	IpnetWLId     int    `orm:"pk;column(ipnet_wl_id)"`
+	IpStart       string `orm:"size(128)"`
+	IpEnd         string `orm:"size(128)"`
+	Ipnet         string `orm:"size(128)"`
+	Mask          uint8
+	ClientSetId   int    `orm:"column(clientset_id)"`
+	ClientSetName string `orm:"column(clientset_name);size(128)"`
 }
 
-func (t *NetLink) TableName() string {
-	return "netlink_view"
+func (m *ClientSetWLView) TableName() string {
+	return "clientset_wl_view"
 }
 
 func init() {
-	orm.RegisterModel(new(NetLink))
+	orm.RegisterModel(new(ClientSetWLView))
 }
 
-// GetAllNetLink retrieves all NetLink matches certain condition. Returns empty list if
-// no records exist
-func GetAllNetLink(query Values, fields []string, sortby []string, order []string,
+func GetAllClientSetWLView(o orm.Ormer, query Values, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
-	o := orm.NewOrm()
-	qs := o.QueryTable(new(NetLink))
+	if o == nil {
+		o = orm.NewOrm()
+	}
+
+	qs := o.QueryTable(new(ClientSetWLView))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
 		k = strings.Replace(k, ".", "__", -1)
 		qs = qs.Filter(k, v...)
 	}
+
 	// order by:
 	var sortFields []string
 	if len(sortby) != 0 {
@@ -79,7 +79,7 @@ func GetAllNetLink(query Values, fields []string, sortby []string, order []strin
 		}
 	}
 
-	var l []NetLink
+	var l []ClientSetWLView
 	qs = qs.OrderBy(sortFields...)
 	if _, err = qs.Limit(limit, offset).All(&l, fields...); err == nil {
 		if len(fields) == 0 {

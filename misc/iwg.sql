@@ -308,6 +308,15 @@ where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and 
 and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0
 group by routeset_id;
 
+
+create ALGORITHM = MERGE view base_route_view as
+select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, route.priority as route_priority, route.score as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
+from netlinkset, outlink, route, routeset
+where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
+and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0;
+
+
+/*
 create ALGORITHM = MERGE view base_route_view as
 select
 viewer.clientset_id,
@@ -316,19 +325,18 @@ viewer.domain_pool_id,
 domain_pool.name as domain_pool_name,
 viewer.routeset_id, routeset.name as routeset_name,
 netlinkset_id, netlinkset.name as netlinkset_name,
-route.id as route_id, min(route.priority) as route_priority, max(route.score) as route_score,
+route.id as route_id, route.priority as route_priority, route.score as route_score,
 outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
 from clientset, domain_pool, viewer, routeset, netlinkset, route, outlink
 where
 clientset.id = viewer.clientset_id and domain_pool.id = viewer.domain_pool_id and viewer.routeset_id = routeset.id
 and netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
-and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and viewer.enable = true
-group by viewer.routeset_id;
-
+and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and viewer.enable = true;
+*/
 
 
 create ALGORITHM = MERGE view policy_view as
-select viewer.clientset_id, viewer.domain_pool_id, viewer.policy_id, policy.name as policy_name,
+select viewer.clientset_id, viewer.domain_pool_id,viewer.routeset_id, viewer.policy_id, policy.name as policy_name,
 policy_detail.policy_sequence, policy_detail.priority, policy_detail.weight, policy_detail.op, policy_detail.op_typ,
 policy_detail.ldns_id, ldns.name, ldns.addr, ldns.typ,
 policy_detail.rrset_id

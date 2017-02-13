@@ -8,29 +8,36 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-type DstView struct {
-	DomainPoolId   int    `orm:"pk"`
-	NetLinkId      int    `orm:"column(netlink_id)"`
-	DstViewId      int    `orm:"column(netlinkset_id)"`
-	DomainPoolName string `orm:"size(128)"`
-	Isp            string `orm:"size(128)"`
-	Region         string `orm:"size(128)"`
+type RouteView struct {
+	RoutesetId     int    `orm:"pk"`
+	RoutesetName   string `orm:"size(128)"`
+	NetlinksetId   int
+	NetlinksetName string `orm:"size(128)"`
+	RouteId        int
+	RoutePriority  int
+	RouteScore     int
+	OutlinkId      int
+	OutlinkName    string `orm:"size(128)"`
+	OutlinkAddr    string `orm:"size(128)"`
+	OutlinkTyp     string `orm:"size(128)"`
 }
 
-func (t *DstView) TableName() string {
-	return "dst_view"
+func (t *RouteView) TableName() string {
+	return "base_route_view"
 }
 
 func init() {
-	orm.RegisterModel(new(DstView))
+	orm.RegisterModel(new(RouteView))
 }
 
-// GetAllDstView retrieves all DstView matches certain condition. Returns empty list if
+// GetAllRouteView retrieves all RouteView matches certain condition. Returns empty list if
 // no records exist
-func GetAllDstView(query Values, fields []string, sortby []string, order []string,
+func GetAllRouteView(o orm.Ormer, query Values, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
-	o := orm.NewOrm()
-	qs := o.QueryTable(new(DstView))
+	if o == nil {
+		o = orm.NewOrm()
+	}
+	qs := o.QueryTable(new(RouteView))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
@@ -76,7 +83,7 @@ func GetAllDstView(query Values, fields []string, sortby []string, order []strin
 		}
 	}
 
-	var l []DstView
+	var l []RouteView
 	qs = qs.OrderBy(sortFields...)
 	if _, err = qs.Limit(limit, offset).All(&l, fields...); err == nil {
 		if len(fields) == 0 {

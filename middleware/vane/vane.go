@@ -14,7 +14,8 @@ import (
 
 type Vane struct {
 	Next   middleware.Handler
-	DB     DBer
+	DB     Loader
+	engine *Engine
 	DBHost string
 }
 
@@ -39,7 +40,7 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		remoteAddr = subnet.Address
 	}
 
-	clientSet, err := v.DB.GetClientSetID(remoteAddr)
+	clientSet, err := v.engine.GetClientSetID(remoteAddr)
 	if err != nil {
 		clientSet = 1
 	}

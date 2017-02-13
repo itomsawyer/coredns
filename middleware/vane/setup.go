@@ -57,15 +57,15 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 					}
 
 					if len(args) >= 2 {
-						if e, ok := DBEngines[args[0]]; !ok {
+						e := GetLoader(args[0])
+						if e == nil {
 							return nil, fmt.Errorf("DB engine %s does not exists", args[0])
-						} else {
-							vane.DB = e
 						}
 
+						vane.DB = e
 						vane.DBHost = args[1]
 					} else {
-						vane.DB = DBEngines["default"]
+						vane.DB = GetLoader("default")
 						vane.DBHost = args[0]
 					}
 
@@ -81,11 +81,17 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 	}
 
 	c.OnFirstStartup(func() error {
-		return vane.DB.Open(vane.DBHost)
+		return vane.DB.Init(vane.DBHost)
 	})
 
 	c.OnStartup(func() error {
-		return vane.DB.Load()
+		e, err := vane.DB.LoadAll()
+		if err != nil {
+			return err
+		}
+
+		vane.engine = e
+		return nil
 	})
 
 	return vane, nil

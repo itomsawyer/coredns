@@ -8,33 +8,31 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-type PolicyView struct {
-	ClientsetId    int `orm:"pk"`
-	DomainPoolId   int
-	RouteSetId     int `orm:"column(routeset_id)"`
-	PolicyId       int
-	PolicyName     string
-	PolicySequence int
-	Priority       int
-	Op             string `orm:"size(128)"`
-	OpTyp          string `orm:"size(128)"`
-	LdnsId         int
-	Name           string `orm:"size(128)"`
-	Addr           string `orm:"size(128)"`
-	Typ            string `orm:"size(128)"`
-	RrsetId        int
+type DstView struct {
+	DomainPoolId   int    `orm:"pk"`
+	NetLinkId      int    `orm:"column(netlink_id)"`
+	DstViewId      int    `orm:"column(netlinkset_id)"`
+	DomainPoolName string `orm:"size(128)"`
+	Isp            string `orm:"size(128)"`
+	Region         string `orm:"size(128)"`
+}
+
+func (t *DstView) TableName() string {
+	return "dst_view"
 }
 
 func init() {
-	orm.RegisterModel(new(PolicyView))
+	orm.RegisterModel(new(DstView))
 }
 
-// GetAllPolicyView retrieves all PolicyView matches certain condition. Returns empty list if
+// GetAllDstView retrieves all DstView matches certain condition. Returns empty list if
 // no records exist
-func GetAllPolicyView(query Values, fields []string, sortby []string, order []string,
+func GetAllDstView(o orm.Ormer, query Values, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
-	o := orm.NewOrm()
-	qs := o.QueryTable(new(PolicyView))
+	if o == nil {
+		o = orm.NewOrm()
+	}
+	qs := o.QueryTable(new(DstView))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
@@ -80,7 +78,7 @@ func GetAllPolicyView(query Values, fields []string, sortby []string, order []st
 		}
 	}
 
-	var l []PolicyView
+	var l []DstView
 	qs = qs.OrderBy(sortFields...)
 	if _, err = qs.Limit(limit, offset).All(&l, fields...); err == nil {
 		if len(fields) == 0 {

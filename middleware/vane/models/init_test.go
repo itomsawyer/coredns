@@ -13,6 +13,7 @@ func TestMain(m *testing.M) {
 	orm.Debug = true
 	if err != nil {
 		fmt.Println("cannot launch testing due to init error:", err)
+		fmt.Println("please modify middleware/vane/models/init_test.go for db connection")
 		os.Exit(-1)
 	}
 
