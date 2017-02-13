@@ -18,6 +18,7 @@ type Engine struct {
 	L         Loader
 	Loaded    bool
 	ClientSet *iptree.IPTree
+	NetLink   *iptree.IPTree
 }
 
 func NewEngine(l Loader) *Engine {

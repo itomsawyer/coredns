@@ -10,9 +10,7 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-type MySQLoader struct {
-	lock sync.Mutex
-}
+type MySQLoader struct{}
 
 func (l *MySQLoader) Init(nsd string) error {
 	return models.InitDB(nsd)
@@ -39,15 +37,12 @@ func (l *MySQLoader) LoadAll() (engine *Engine, err error) {
 	}()
 
 	wg.Add(1)
-	fmt.Println("loadClientSet")
 	go func() {
 		l.loadClientSet(o, engine, errChan)
 		wg.Done()
 	}()
 
-	fmt.Println("wait")
 	wg.Wait()
-	fmt.Println("loaded")
 
 	select {
 	case err = <-errChan:
@@ -58,7 +53,6 @@ func (l *MySQLoader) LoadAll() (engine *Engine, err error) {
 	default:
 	}
 
-	fmt.Println("return")
 	return
 }
 
@@ -66,6 +60,7 @@ func (l *MySQLoader) loadClientSet(o orm.Ormer, engine *Engine, errChan chan<- e
 	var (
 		cs        models.ClientSetView
 		clientSet []interface{}
+		//clientWLSet []interface{}
 	)
 
 	defer func() {
@@ -82,6 +77,13 @@ func (l *MySQLoader) loadClientSet(o orm.Ormer, engine *Engine, errChan chan<- e
 		return
 	}
 
+	/*
+		clientWLSet, err = models.GetAllClientSetWLView(o, nil, nil, nil, nil, 0, -1)
+		if err != nil {
+			return
+		}
+	*/
+
 	ipt := iptree.New()
 
 	for _, c := range clientSet {
@@ -92,8 +94,46 @@ func (l *MySQLoader) loadClientSet(o orm.Ormer, engine *Engine, errChan chan<- e
 		}
 	}
 
-	l.lock.Lock()
-	defer l.lock.Unlock()
+	/*
+		for _, c := range clientWLSet {
+			cs = c.(models.ClientSetWLView)
+			err = ipt.AddByString(fmt.Sprintf("%s/%d", cs.Ipnet, int(cs.Mask)), cs.IpnetId)
+			if err != nil {
+				return
+			}
+		}
+	*/
+
 	engine.ClientSet = ipt
+	return
+}
+
+func (l *MySQLoader) loadNetlink(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
+	var (
+		nl       models.NetLinkView
+		netlinks []interface{}
+	)
+
+	defer func() {
+		if err != nil && errChan != nil {
+			errChan <- err
+		}
+	}()
+
+	netlinks, err = models.GetAllNetLinkView(o, nil, nil, nil, nil, 0, -1)
+	if err != nil {
+		return
+	}
+
+	ipt := iptree.New()
+	for _, n := range netlinks {
+		nl = n.(models.NetLinkView)
+		err = ipt.AddByString(fmt.Sprintf("%s/%d", nl.Ipnet, int(nl.Mask)), nl.NetLinkId)
+		if err != nil {
+			return
+		}
+	}
+
+	engine.NetLink = ipt
 	return
 }
