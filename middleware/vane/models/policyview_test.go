@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestGetClientSet(t *testing.T) {
-	nl, err := GetAllClientSetView(nil, nil, nil, nil, nil, 0, 1)
+func TestPolicyView(t *testing.T) {
+	nl, err := GetAllPolicyView(nil, nil, nil, nil, 0, 1)
 	if err != nil {
 		t.Error(err)
 		t.Fail()

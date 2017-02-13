@@ -8,40 +8,38 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-type ClientSetView struct {
-	IpnetId       int64  `orm:"pk"`
-	IpStart       string `orm:"size(128)"`
-	IpEnd         string `orm:"size(128)"`
-	Ipnet         string `orm:"size(128)"`
-	Mask          uint8
-	ClientSetId   int64  `orm:"column(clientset_id)"`
-	ClientSetName string `orm:"column(clientset_name);size(128)"`
-}
-
-func (m *ClientSetView) TableName() string {
-	return "clientset_view"
+type PolicyView struct {
+	ClientsetId    int `orm:"pk"`
+	DomainPoolId   int
+	PolicyId       int
+	PolicyName     string
+	PolicySequence int
+	Priority       int
+	Op             string `orm:"size(128)"`
+	OpTyp          string `orm:"size(128)"`
+	LdnsId         int
+	Name           string `orm:"size(128)"`
+	Addr           string `orm:"size(128)"`
+	Typ            string `orm:"size(128)"`
+	RrsetId        int
 }
 
 func init() {
-	orm.RegisterModel(new(ClientSetView))
+	orm.RegisterModel(new(PolicyView))
 }
 
-// GetAllClientSetView retrieves all IpsetView matches certain condition. Returns empty list if
+// GetAllPolicyView retrieves all PolicyView matches certain condition. Returns empty list if
 // no records exist
-func GetAllClientSetView(o orm.Ormer, query Values, fields []string, sortby []string, order []string,
+func GetAllPolicyView(query Values, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
-	if o == nil {
-		o = orm.NewOrm()
-	}
-
-	qs := o.QueryTable(new(ClientSetView))
+	o := orm.NewOrm()
+	qs := o.QueryTable(new(PolicyView))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
 		k = strings.Replace(k, ".", "__", -1)
 		qs = qs.Filter(k, v...)
 	}
-
 	// order by:
 	var sortFields []string
 	if len(sortby) != 0 {
@@ -81,7 +79,7 @@ func GetAllClientSetView(o orm.Ormer, query Values, fields []string, sortby []st
 		}
 	}
 
-	var l []ClientSetView
+	var l []PolicyView
 	qs = qs.OrderBy(sortFields...)
 	if _, err = qs.Limit(limit, offset).All(&l, fields...); err == nil {
 		if len(fields) == 0 {
