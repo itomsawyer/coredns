@@ -9,9 +9,9 @@ import (
 )
 
 type DstView struct {
-	DomainPoolId   int64  `orm:"pk"`
-	NetLinkId      int64  `orm:"column(netlink_id)"`
-	DstViewId      int64  `orm:"column(netlinkset_id)"`
+	DomainPoolId   int    `orm:"pk"`
+	NetLinkId      int    `orm:"column(netlink_id)"`
+	DstViewId      int    `orm:"column(netlinkset_id)"`
 	DomainPoolName string `orm:"size(128)"`
 	Isp            string `orm:"size(128)"`
 	Region         string `orm:"size(128)"`

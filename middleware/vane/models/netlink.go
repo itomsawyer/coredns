@@ -9,12 +9,12 @@ import (
 )
 
 type NetLink struct {
-	IptableId int64  `orm:"pk"`
+	IptableId int    `orm:"pk"`
 	IpStart   string `orm:"size(128)"`
 	IpEnd     string `orm:"size(128)"`
 	Ipnet     string `orm:"size(128)"`
 	Mask      uint8
-	NetLinkId int64  `orm:"column(netlink_id)"`
+	NetLinkId int    `orm:"column(netlink_id)"`
 	Isp       string `orm:"size(128)"`
 	Region    string `orm:"size(128)"`
 	Typ       string `orm:"size(128)"`

@@ -9,9 +9,9 @@ import (
 )
 
 type DomainView struct {
-	DomainId     int64  `orm:"pk"`
+	DomainId     int    `orm:"pk"`
 	Domain       string `orm:"size(128)"`
-	DomainPoolId int64
+	DomainPoolId int
 	PoolName     string `orm:"size(128)"`
 }
 

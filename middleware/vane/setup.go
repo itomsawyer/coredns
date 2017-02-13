@@ -2,10 +2,10 @@ package vane
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/miekg/coredns/core/dnsserver"
 	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/middleware/vane/models"
 
 	"github.com/mholt/caddy"
 )
@@ -56,7 +56,18 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 						return nil, c.ArgErr()
 					}
 
-					vane.DBHost = args[0]
+					if len(args) >= 2 {
+						if e, ok := DBEngines[args[0]]; !ok {
+							return nil, fmt.Errorf("DB engine %s does not exists", args[0])
+						} else {
+							vane.DB = e
+						}
+
+						vane.DBHost = args[1]
+					} else {
+						vane.DB = DBEngines["default"]
+						vane.DBHost = args[0]
+					}
 
 				default:
 					return nil, c.ArgErr()
@@ -70,7 +81,7 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 	}
 
 	c.OnFirstStartup(func() error {
-		return models.InitDB(vane.DBHost)
+		return vane.DB.Open(vane.DBHost)
 	})
 
 	return vane, nil

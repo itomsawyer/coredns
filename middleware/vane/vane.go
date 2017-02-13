@@ -14,6 +14,7 @@ import (
 
 type Vane struct {
 	Next   middleware.Handler
+	DB     DBer
 	DBHost string
 }
 

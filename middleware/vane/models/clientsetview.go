@@ -9,12 +9,12 @@ import (
 )
 
 type ClientSetView struct {
-	IpnetId       int64  `orm:"pk"`
+	IpnetId       int    `orm:"pk"`
 	IpStart       string `orm:"size(128)"`
 	IpEnd         string `orm:"size(128)"`
 	Ipnet         string `orm:"size(128)"`
 	Mask          uint8
-	ClientSetId   int64  `orm:"column(clientset_id)"`
+	ClientSetId   int    `orm:"column(clientset_id)"`
 	ClientSetName string `orm:"column(clientset_name);size(128)"`
 }
 
