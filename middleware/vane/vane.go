@@ -1,6 +1,7 @@
 package vane
 
 import (
+	"fmt"
 	"net"
 
 	"github.com/miekg/coredns/middleware"
@@ -36,6 +37,8 @@ func (d Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 	} else {
 		remoteAddr = subnet.Address
 	}
+
+	fmt.Println(remoteAddr)
 
 	answer := new(dns.Msg)
 	answer.SetReply(r)
