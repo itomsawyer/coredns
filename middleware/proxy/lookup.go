@@ -54,6 +54,54 @@ func NewLookup(hosts []string) Proxy {
 	return p
 }
 
+// NewLookup create a new proxy with the hosts in host and a Random policy.
+func NewLookup2(hosts [][]string) Proxy {
+	// TODO(miek): maybe add optional protocol parameter?
+	upstreams := make([]Upstream, 0, 1)
+	p := Proxy{Next: nil}
+
+	for _, v := range hosts {
+		upstream := &staticUpstream{
+			from:        "",
+			Hosts:       make([]*UpstreamHost, len(v)),
+			Policy:      &Random{},
+			Spray:       nil,
+			FailTimeout: 10 * time.Second,
+			MaxFails:    3,
+		}
+
+		for i, host := range v {
+			uh := &UpstreamHost{
+				Name:        host,
+				Conns:       0,
+				Fails:       0,
+				FailTimeout: upstream.FailTimeout,
+				Exchanger:   newDNSEx(host),
+
+				Unhealthy: false,
+				CheckDown: func(upstream *staticUpstream) UpstreamHostDownFunc {
+					return func(uh *UpstreamHost) bool {
+						if uh.Unhealthy {
+							return true
+						}
+						fails := atomic.LoadInt32(&uh.Fails)
+						if fails >= upstream.MaxFails && upstream.MaxFails != 0 {
+							return true
+						}
+						return false
+					}
+				}(upstream),
+				WithoutPathPrefix: upstream.WithoutPathPrefix,
+			}
+			upstream.Hosts[i] = uh
+		}
+
+		upstreams = append(upstreams, upstream)
+	}
+	p.Upstreams = upstreams
+	return p
+}
+
 // Lookup will use name and type to forge a new message and will send that upstream. It will
 // set any EDNS0 options correctly so that downstream will be able to process the reply.
 func (p Proxy) Lookup(state request.Request, name string, typ uint16) (*dns.Msg, error) {

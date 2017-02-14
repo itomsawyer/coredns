@@ -22,7 +22,13 @@ type Vane struct {
 func (v Vane) Name() string { return "vane" }
 
 func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	var remoteAddr net.IP
+	var (
+		remoteAddr net.IP
+		engine     *Engine
+	)
+
+	engine = v.engine
+
 	if len(r.Question) == 0 {
 		return 0, nil
 	}
@@ -32,20 +38,30 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		return 0, nil
 	}
 
+	state := request.Request{W: w, Req: r}
+
 	subnet := edns.ReadClientSubnet(r)
 	if subnet == nil {
-		state := request.Request{W: w, Req: r}
 		remoteAddr = net.ParseIP(state.IP()).To4()
 	} else {
 		remoteAddr = subnet.Address
 	}
 
-	clientSet, err := v.engine.GetClientSetID(remoteAddr)
+	clientSet, err := engine.GetClientSetID(remoteAddr)
 	if err != nil {
 		clientSet = 1
 	}
 
 	fmt.Println("Client Set:", clientSet)
+
+	fmt.Println("Proxys:", engine.Proxy)
+	fmt.Println("Exchange to", engine.Proxy[1])
+	_, err = engine.Proxy[1].Lookup(state, q.Name, q.Qtype)
+	if err != nil {
+		fmt.Println("error ", err)
+		return 0, err
+	}
+	fmt.Println("done")
 
 	answer := new(dns.Msg)
 	answer.SetReply(r)

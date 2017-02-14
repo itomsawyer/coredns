@@ -3,16 +3,14 @@ package models
 import (
 	"errors"
 	"reflect"
+	"sort"
 	"strings"
 
 	"github.com/astaxie/beego/orm"
 )
 
 type PolicyView struct {
-	ClientsetId    int `orm:"pk"`
-	DomainPoolId   int
-	RouteSetId     int `orm:"column(routeset_id)"`
-	PolicyId       int
+	PolicyId       int `orm:"pk"`
 	PolicyName     string
 	PolicySequence int
 	Priority       int
@@ -29,11 +27,69 @@ func init() {
 	orm.RegisterModel(new(PolicyView))
 }
 
+type PolicySlice []*PolicyView
+
+func (p PolicySlice) Len() int {
+	return len(p)
+}
+
+func (p PolicySlice) Less(i, j int) bool {
+	return p[i].Priority < p[j].Priority
+}
+
+func (p PolicySlice) Swap(i, j int) {
+	p[i], p[j] = p[j], p[i]
+}
+
+func (p PolicySlice) Hosts() [][]string {
+	if len(p) == 0 {
+		return nil
+	}
+
+	sort.Sort(p)
+
+	prio := -1
+	hosts := make([][]string, 0, 4)
+	hs := make([]string, 0, 1)
+
+	for _, p := range p {
+		if p.Priority > prio {
+			if hs != nil {
+				hosts = append(hosts, hs)
+			}
+
+			hs = make([]string, 0, 1)
+			prio = p.Priority
+		}
+
+		hs = append(hs, p.Addr)
+	}
+
+	if len(hs) > 0 {
+		hosts = append(hosts, hs)
+	}
+
+	return hosts
+}
+
+type PolicySet map[int]PolicySlice
+
+func (p PolicySet) Add(id int, pv *PolicyView) {
+	if p[id] == nil {
+		p[id] = PolicySlice{pv}
+		return
+	}
+
+	p[id] = append(p[id], pv)
+}
+
 // GetAllPolicyView retrieves all PolicyView matches certain condition. Returns empty list if
 // no records exist
-func GetAllPolicyView(query Values, fields []string, sortby []string, order []string,
+func GetAllPolicyView(o orm.Ormer, query Values, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
-	o := orm.NewOrm()
+	if o == nil {
+		o = orm.NewOrm()
+	}
 	qs := o.QueryTable(new(PolicyView))
 	// query k=v
 	for k, v := range query {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/miekg/coredns/middleware/pkg/dmtree"
 	"github.com/miekg/coredns/middleware/pkg/iptree"
+	"github.com/miekg/coredns/middleware/proxy"
 	"github.com/miekg/coredns/middleware/vane/models"
 
 	"github.com/astaxie/beego/orm"
@@ -39,19 +40,25 @@ func (l *MySQLoader) LoadAll() (engine *Engine, err error) {
 
 	wg.Add(1)
 	go func() {
-		l.loadClientSet(o, engine, errChan)
+		LoadClientSet(o, engine, errChan)
 		wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
-		l.loadNetlink(o, engine, errChan)
+		LoadNetlink(o, engine, errChan)
 		wg.Done()
 	}()
 
 	wg.Add(1)
 	go func() {
-		l.loadDomain(o, engine, errChan)
+		LoadDomain(o, engine, errChan)
+		wg.Done()
+	}()
+
+	wg.Add(1)
+	go func() {
+		LoadPolicy(o, engine, errChan)
 		wg.Done()
 	}()
 
@@ -69,7 +76,7 @@ func (l *MySQLoader) LoadAll() (engine *Engine, err error) {
 	return
 }
 
-func (l *MySQLoader) loadClientSet(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
+func LoadClientSet(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
 	var (
 		cs        models.ClientSetView
 		clientSet []interface{}
@@ -121,7 +128,7 @@ func (l *MySQLoader) loadClientSet(o orm.Ormer, engine *Engine, errChan chan<- e
 	return
 }
 
-func (l *MySQLoader) loadNetlink(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
+func LoadNetlink(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
 	var (
 		nl       models.NetLinkView
 		netlinks []interface{}
@@ -151,7 +158,7 @@ func (l *MySQLoader) loadNetlink(o orm.Ormer, engine *Engine, errChan chan<- err
 	return
 }
 
-func (l *MySQLoader) loadDomain(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
+func LoadDomain(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
 	var (
 		ds        models.DomainView
 		domainSet []interface{}
@@ -179,6 +186,43 @@ func (l *MySQLoader) loadDomain(o orm.Ormer, engine *Engine, errChan chan<- erro
 	return
 }
 
-func (l *MySQLoader) loadPolicy(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
+func LoadPolicy(o orm.Ormer, engine *Engine, errChan chan<- error) (err error) {
+	var (
+		pv          models.PolicyView
+		policyViews []interface{}
+	)
+
+	defer func() {
+		if err != nil && errChan != nil {
+			errChan <- err
+		}
+	}()
+
+	policyViews, err = models.GetAllPolicyView(o, nil, nil, nil, nil, 0, -1)
+	if err != nil {
+		return
+	}
+
+	policySet := models.PolicySet{}
+	for _, v := range policyViews {
+		pv = v.(models.PolicyView)
+		policySet.Add(pv.PolicyId, &pv)
+	}
+
+	ps := make(map[int]*proxy.Proxy, 16)
+	for k, s := range policySet {
+		hosts := s.Hosts()
+		if hosts == nil {
+			continue
+		}
+
+		proxy := proxy.NewLookup2(hosts)
+		if k == 1 {
+			fmt.Println(proxy)
+		}
+		ps[k] = &proxy
+	}
+
+	engine.Proxy = ps
 	return
 }

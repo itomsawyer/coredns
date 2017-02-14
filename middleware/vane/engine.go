@@ -6,6 +6,7 @@ import (
 
 	"github.com/miekg/coredns/middleware/pkg/dmtree"
 	"github.com/miekg/coredns/middleware/pkg/iptree"
+	"github.com/miekg/coredns/middleware/proxy"
 )
 
 type Enginer interface {
@@ -21,6 +22,7 @@ type Engine struct {
 	ClientSet *iptree.IPTree
 	NetLink   *iptree.IPTree
 	DomainSet *dmtree.DmTree
+	Proxy     map[int]*proxy.Proxy
 }
 
 func NewEngine(l Loader) *Engine {
