@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 
+	"github.com/miekg/coredns/middleware/pkg/dmtree"
 	"github.com/miekg/coredns/middleware/pkg/iptree"
 )
 
@@ -19,6 +20,7 @@ type Engine struct {
 	Loaded    bool
 	ClientSet *iptree.IPTree
 	NetLink   *iptree.IPTree
+	DomainSet *dmtree.DmTree
 }
 
 func NewEngine(l Loader) *Engine {
@@ -38,4 +40,13 @@ func (e *Engine) GetClientSetID(ip net.IP) (int, error) {
 		return 0, errors.New("ClientSet not found")
 	}
 	return id, err
+}
+
+func (e *Engine) GetDomainID(domain string) (int, error) {
+	v, ok := e.DomainSet.Find(domain)
+	if !ok && v == nil {
+		return 0, errors.New("domain pool id not found")
+	}
+
+	return v.(int), nil
 }

@@ -336,16 +336,16 @@ and outlink.enable = true and route.enable = true and outlink.unavailable = 0 an
 
 
 create ALGORITHM = MERGE view policy_view as
-select viewer.clientset_id, viewer.domain_pool_id,viewer.routeset_id, viewer.policy_id, policy.name as policy_name,
+select policy.id as policy_id, policy.name as policy_name,
 policy_detail.policy_sequence, policy_detail.priority, policy_detail.weight, policy_detail.op, policy_detail.op_typ,
 policy_detail.ldns_id, ldns.name, ldns.addr, ldns.typ,
 policy_detail.rrset_id
-from viewer, policy, policy_detail, ldns
-where policy.id = policy_detail.policy_id and ldns.id = policy_detail.ldns_id and viewer.policy_id = policy.id
-and ldns.unavailable = 0 and ldns.enable = true and viewer.enable = true and policy_detail.enable = true;
+from  policy, policy_detail, ldns
+where policy.id = policy_detail.policy_id and ldns.id = policy_detail.ldns_id 
+and ldns.unavailable = 0 and ldns.enable = true and policy_detail.enable = true;
 
 create ALGORITHM = MERGE view src_view as
-select clientset_id, clientset.name as clientset_name, domain_pool_id, domain_pool.name as domain_pool_name, routeset_id, routeset.name as routeset_name
-from clientset, domain_pool, viewer, routeset
-where clientset.id = viewer.clientset_id and domain_pool.id = viewer.domain_pool_id and routeset.id = viewer.routeset_id
+select clientset_id, clientset.name as clientset_name, domain_pool_id, domain_pool.name as domain_pool_name, routeset_id, routeset.name as routeset_name, policy_id, policy.name as policy_name
+from clientset, domain_pool, viewer, routeset, policy
+where clientset.id = viewer.clientset_id and domain_pool.id = viewer.domain_pool_id and routeset.id = viewer.routeset_id and policy.id = viewer.policy_id
 and viewer.enable = true

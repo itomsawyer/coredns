@@ -25,9 +25,12 @@ func init() {
 
 // GetAllDomainView retrieves all DomainView matches certain condition. Returns empty list if
 // no records exist
-func GetAllDomainView(query Values, fields []string, sortby []string, order []string,
+func GetAllDomainView(o orm.Ormer, query Values, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
-	o := orm.NewOrm()
+	if o == nil {
+		o = orm.NewOrm()
+	}
+
 	qs := o.QueryTable(new(DomainView))
 	// query k=v
 	for k, v := range query {
