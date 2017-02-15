@@ -21,10 +21,15 @@ func newDNSEx(address string) *dnsEx {
 	return &dnsEx{Address: address, group: new(singleflight.Group), Timeout: defaultTimeout * time.Second}
 }
 
-func (d *dnsEx) OnStartup() error             { return nil }
-func (d *dnsEx) OnShutdown() error            { return nil }
-func (d *dnsEx) SetUpstream(u Upstream) error { return nil }
-func (d *dnsEx) Protocol() protocol           { return dnsProto }
+func newDNSExWithTimeout(address string, timeout time.Duration) *dnsEx {
+	return &dnsEx{Address: address, group: new(singleflight.Group), Timeout: timeout}
+}
+
+func (d *dnsEx) OnStartup() error                 { return nil }
+func (d *dnsEx) OnShutdown() error                { return nil }
+func (d *dnsEx) SetUpstream(u Upstream) error     { return nil }
+func (d *dnsEx) SetTimeout(timeout time.Duration) { d.Timeout = timeout }
+func (d *dnsEx) Protocol() protocol               { return dnsProto }
 
 // Exchange implements the Exchanger interface.
 func (d *dnsEx) Exchange(state request.Request) (*dns.Msg, error) {

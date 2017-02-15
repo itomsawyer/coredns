@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"time"
+
 	"github.com/miekg/coredns/request"
 	"github.com/miekg/dns"
 )
@@ -10,6 +12,7 @@ import (
 type Exchanger interface {
 	Exchange(request.Request) (*dns.Msg, error)
 	SetUpstream(Upstream) error // (Re)set the upstream
+	SetTimeout(timeout time.Duration)
 	OnStartup() error
 	OnShutdown() error
 	Protocol() protocol

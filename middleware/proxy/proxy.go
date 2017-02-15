@@ -47,10 +47,34 @@ type UpstreamHost struct {
 	Name              string // IP address (and port) of this upstream host
 	Fails             int32
 	FailTimeout       time.Duration
+	QueryTimeout      time.Duration
 	Unhealthy         bool
 	CheckDown         UpstreamHostDownFunc
 	WithoutPathPrefix string
 	Exchanger
+}
+
+func (uh *UpstreamHost) SetQueryTimeout(timeout time.Duration) {
+	uh.QueryTimeout = timeout
+	uh.SetTimeout(timeout)
+}
+
+func (uh *UpstreamHost) DoExchange(state request.Request) (*dns.Msg, error) {
+	atomic.AddInt64(&uh.Conns, 1)
+	defer atomic.AddInt64(&uh.Conns, -1)
+	return uh.Exchange(state)
+}
+
+func (uh *UpstreamHost) Fail() {
+	timeout := uh.FailTimeout
+	if timeout == 0 {
+		timeout = 10 * time.Second
+	}
+	atomic.AddInt32(&uh.Fails, 1)
+	go func(host *UpstreamHost, timeout time.Duration) {
+		time.Sleep(timeout)
+		atomic.AddInt32(&host.Fails, -1)
+	}(uh, timeout)
 }
 
 // Down checks whether the upstream host is down or not.
@@ -71,9 +95,52 @@ var tryDuration = 60 * time.Second
 
 // ServeDNS satisfies the middleware.Handler interface.
 func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	var span, child ot.Span
+	var (
+		span, child ot.Span
+	)
+
 	span = ot.SpanFromContext(ctx)
 	state := request.Request{W: w, Req: r}
+
+	/*
+		if v := ctx.Value("upstream_host"); v != nil {
+			host, ok := v.(*UpstreamHost)
+
+			if ok && host != nil {
+
+				if span != nil {
+					child = span.Tracer().StartSpan("exchange", ot.ChildOf(span.Context()))
+					ctx = ot.ContextWithSpan(ctx, child)
+				}
+
+				atomic.AddInt64(&host.Conns, 1)
+
+				reply, backendErr := host.Exchange(state)
+
+				atomic.AddInt64(&host.Conns, -1)
+
+				if child != nil {
+					child.Finish()
+				}
+
+				if backendErr == nil {
+					w.WriteMsg(reply)
+					return 0, nil
+				}
+
+				timeout := host.FailTimeout
+				if timeout == 0 {
+					timeout = 10 * time.Second
+				}
+				atomic.AddInt32(&host.Fails, 1)
+				go func(host *UpstreamHost, timeout time.Duration) {
+					time.Sleep(timeout)
+					atomic.AddInt32(&host.Fails, -1)
+				}(host, timeout)
+			}
+		}
+	*/
+
 	for _, upstream := range p.Upstreams {
 		start := time.Now()
 
