@@ -13,10 +13,7 @@ import (
 )
 
 type Vane struct {
-	Next   middleware.Handler
-	DB     Loader
-	engine *Engine
-	DBHost string
+	Next middleware.Handler
 }
 
 func (v Vane) Name() string { return "vane" }
@@ -24,10 +21,7 @@ func (v Vane) Name() string { return "vane" }
 func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
 		remoteAddr net.IP
-		engine     *Engine
 	)
-
-	engine = v.engine
 
 	if len(r.Question) == 0 {
 		return 0, nil
@@ -47,30 +41,7 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		remoteAddr = subnet.Address
 	}
 
-	clientSet, err := engine.GetClientSetID(remoteAddr)
-	if err != nil {
-		clientSet = 1
-	}
+	fmt.Println(remoteAddr)
 
-	fmt.Println("Client Set:", clientSet)
-
-	fmt.Println("Proxys:", engine.Proxy)
-	fmt.Println("Exchange to", engine.Proxy[1])
-	_, err = engine.Proxy[1].Lookup(state, q.Name, q.Qtype)
-	if err != nil {
-		fmt.Println("error ", err)
-		return 0, err
-	}
-	fmt.Println("done")
-
-	answer := new(dns.Msg)
-	answer.SetReply(r)
-	rr := new(dns.A)
-	rr.Hdr = dns.RR_Header{Name: q.Name, Rrtype: q.Qtype, Class: q.Qclass, Ttl: 300}
-	rr.A = net.ParseIP("127.0.0.1")
-	answer.Answer = []dns.RR{rr}
-
-	w.WriteMsg(answer)
-
-	return 0, nil
+	return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
 }

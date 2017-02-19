@@ -8,35 +8,35 @@ import (
 	"github.com/astaxie/beego/orm"
 )
 
-type DomainView struct {
-	DomainId     int    `orm:"pk"`
-	Domain       string `orm:"size(128)"`
-	DomainPoolId int
-	PoolName     string `orm:"size(128)"`
-}
-
-func (t *DomainView) TableName() string {
-	return "domain_view"
+type SrcView struct {
+	ClientSetId    int    `orm:"pk;column(clientset_id)"`
+	ClientSetName  string `orm:"size(128);column(clientset_name)"`
+	DomainPoolId   int
+	DomainPoolName string `orm:"size(128)"`
+	RouteSetId     int    `orm:"column(routeset_id)"`
+	RouteSetName   string `orm:"size(128);column(routeset_name)"`
+	PolicyId       int
+	PolicyName     string `orm:"size(128)"`
 }
 
 func init() {
-	orm.RegisterModel(new(DomainView))
+	orm.RegisterModel(new(SrcView))
 }
 
-// GetAllDomainView retrieves all DomainView matches certain condition. Returns empty list if
+// GetSrcViewById retrieves SrcView by Id. Returns error if
+// GetAllSrcView retrieves all SrcView matches certain condition. Returns empty list if
 // no records exist
-func GetAllDomainView(o orm.Ormer, query Values, fields []string, sortby []string, order []string,
+func GetAllSrcView(o orm.Ormer, query map[string]string, fields []string, sortby []string, order []string,
 	offset int64, limit int64) (ml []interface{}, err error) {
 	if o == nil {
 		o = orm.NewOrm()
 	}
-
-	qs := o.QueryTable(new(DomainView))
+	qs := o.QueryTable(new(SrcView))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute
 		k = strings.Replace(k, ".", "__", -1)
-		qs = qs.Filter(k, v...)
+		qs = qs.Filter(k, v)
 	}
 	// order by:
 	var sortFields []string
@@ -77,7 +77,7 @@ func GetAllDomainView(o orm.Ormer, query Values, fields []string, sortby []strin
 		}
 	}
 
-	var l []DomainView
+	var l []SrcView
 	qs = qs.OrderBy(sortFields...)
 	if _, err = qs.Limit(limit, offset).All(&l, fields...); err == nil {
 		if len(fields) == 0 {
@@ -100,13 +100,13 @@ func GetAllDomainView(o orm.Ormer, query Values, fields []string, sortby []strin
 	return nil, err
 }
 
-func GetDomainView(o orm.Ormer, query Values, sortby []string, order []string,
-	offset int64, limit int64) (l []DomainView, err error) {
+func GetSrcView(o orm.Ormer, query Values, sortby []string, order []string,
+	offset int64, limit int64) (l []SrcView, err error) {
 	if o == nil {
 		o = orm.NewOrm()
 	}
 
-	qs := o.QueryTable(new(DomainView))
+	qs := o.QueryTable(new(SrcView))
 	// query k=v
 	for k, v := range query {
 		// rewrite dot-notation to Object__Attribute

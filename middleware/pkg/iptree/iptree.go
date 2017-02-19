@@ -40,7 +40,13 @@ func (i *IPTree) Get(ip net.IP) (int, bool, error) {
 	if val == nil {
 		return 0, false, nil
 	}
-	return val.Value.(int), true, nil
+
+	id, ok := val.Value.(int)
+	if !ok {
+		return 0, false, errors.New("type of value is not int")
+	}
+
+	return id, true, nil
 }
 
 func (i *IPTree) GetByString(ipstr string) (int, bool, error) {
@@ -49,4 +55,34 @@ func (i *IPTree) GetByString(ipstr string) (int, bool, error) {
 		return 0, false, errors.New("invalid IP address")
 	}
 	return i.Get(ip)
+}
+
+func (i *IPTree) AddRaw(cidr *net.IPNet, v interface{}) error {
+	size, _ := cidr.Mask.Size()
+	i.R.Insert(ipToUint(cidr.IP.To4()), size, v)
+	return nil
+}
+
+func (i *IPTree) AddRawByString(ipcidr string, v interface{}) error {
+	_, ipnet, err := net.ParseCIDR(ipcidr)
+	if err != nil {
+		return errors.New("invalid CIDR block")
+	}
+	return i.AddRaw(ipnet, v)
+}
+
+func (i *IPTree) GetRaw(ip net.IP) (interface{}, bool, error) {
+	val := i.R.Find(ipToUint(ip.To4()), 32)
+	if val == nil {
+		return 0, false, nil
+	}
+	return val.Value, true, nil
+}
+
+func (i *IPTree) GetRawByString(ipstr string) (interface{}, bool, error) {
+	ip := net.ParseIP(ipstr)
+	if ip == nil {
+		return 0, false, errors.New("invalid IP address")
+	}
+	return i.GetRaw(ip)
 }

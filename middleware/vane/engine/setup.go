@@ -1,4 +1,4 @@
-package vane
+package engine
 
 import (
 	"errors"
@@ -14,37 +14,33 @@ var (
 )
 
 func init() {
-	caddy.RegisterPlugin("vane", caddy.Plugin{
+	caddy.RegisterPlugin("vane_engine", caddy.Plugin{
 		ServerType: "dns",
 		Action:     setup,
 	})
 }
 
 func setup(c *caddy.Controller) error {
-	/*
-		vane, err := parseVane(c)
-		if err != nil {
-			return err
-		}
-	*/
+	vane, err := parseVaneEngine(c)
+	if err != nil {
+		return err
+	}
 
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
-		v := new(Vane)
-		v.Next = next
-		return v
+		vane.Next = next
+		return vane
 	})
 
 	return nil
 }
 
-/*
-func parseVane(c *caddy.Controller) (vane *Vane, err error) {
-	vane = &Vane{
+func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
+	vane = &VaneEngine{
 		DBHost: "root:@localhost/iwg",
 	}
 
 	for c.Next() {
-		if c.Val() == "vane" {
+		if c.Val() == "vane_engine" {
 			args := c.RemainingArgs()
 			if len(args) > 0 {
 				return nil, c.ArgErr()
@@ -57,19 +53,7 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 					if len(args) == 0 {
 						return nil, c.ArgErr()
 					}
-
-					if len(args) >= 2 {
-						e := GetLoader(args[0])
-						if e == nil {
-							return nil, fmt.Errorf("DB engine %s does not exists", args[0])
-						}
-
-						vane.DB = e
-						vane.DBHost = args[1]
-					} else {
-						vane.DB = GetLoader("default")
-						vane.DBHost = args[0]
-					}
+					vane.DBHost = args[0]
 
 				default:
 					return nil, c.ArgErr()
@@ -83,19 +67,12 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 	}
 
 	c.OnFirstStartup(func() error {
-		return vane.DB.Init(vane.DBHost)
+		return vane.RegisterDB()
 	})
 
 	c.OnStartup(func() error {
-		e, err := vane.DB.LoadAll()
-		if err != nil {
-			return err
-		}
-
-		vane.engine = e
-		return nil
+		return vane.Reload()
 	})
 
 	return vane, nil
 }
-*/

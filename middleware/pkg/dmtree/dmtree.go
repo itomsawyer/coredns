@@ -1,9 +1,14 @@
 package dmtree
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/miekg/dns"
+)
+
+var (
+	ErrDuplicate = errors.New("insert with duplicate domain")
 )
 
 type DmTree struct {
@@ -62,7 +67,15 @@ func (t *DmTree) Find(domain string) (interface{}, bool) {
 	return nil, false
 }
 
-func (t *DmTree) Insert(domain string, v interface{}) {
+func (t *DmTree) Insert(domain string, v interface{}) error {
+	return t.insert(domain, v, false)
+}
+
+func (t *DmTree) ForceInsert(domain string, v interface{}) {
+	t.insert(domain, v, true)
+}
+
+func (t *DmTree) insert(domain string, v interface{}, force bool) error {
 	var (
 		node *DmTree
 	)
@@ -72,8 +85,12 @@ func (t *DmTree) Insert(domain string, v interface{}) {
 	}
 
 	if len(domain) == 0 {
+		if t.WildValue != nil && !force {
+			return ErrDuplicate
+		}
+
 		t.WildValue = v
-		return
+		return nil
 	}
 
 	if len(domain) >= 2 && domain[:2] == "*." {
@@ -86,8 +103,12 @@ func (t *DmTree) Insert(domain string, v interface{}) {
 	for i := len(tokens) - 1; i >= 0; i-- {
 		key := tokens[i]
 		if key == "" {
+			if node.WildValue != nil && !force {
+				return ErrDuplicate
+			}
+
 			node.WildValue = v
-			break
+			return nil
 		}
 
 		if node.Next == nil {
@@ -103,6 +124,10 @@ func (t *DmTree) Insert(domain string, v interface{}) {
 		}
 	}
 
+	if node.Value != nil && !force {
+		return ErrDuplicate
+	}
+
 	node.Value = v
-	return
+	return nil
 }

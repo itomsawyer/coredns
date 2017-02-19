@@ -1,9 +1,11 @@
 package cache
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/miekg/coredns/middleware"
+	vane "github.com/miekg/coredns/middleware/vane/engine"
 	"github.com/miekg/coredns/request"
 
 	"github.com/miekg/dns"
@@ -13,6 +15,11 @@ import (
 
 // ServeDNS implements the middleware.Handler interface.
 func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+	v := ctx.Value("vane_engine")
+	if engine, ok := v.(*vane.Engine); ok {
+		fmt.Println("get vane engine", engine)
+	}
+
 	state := request.Request{W: w, Req: r}
 
 	qname := state.Name()

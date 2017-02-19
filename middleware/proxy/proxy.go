@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/miekg/coredns/middleware"
+	"github.com/miekg/coredns/middleware/pkg/dnsutil"
 	"github.com/miekg/coredns/request"
 
 	"github.com/miekg/dns"
@@ -52,6 +53,38 @@ type UpstreamHost struct {
 	CheckDown         UpstreamHostDownFunc
 	WithoutPathPrefix string
 	Exchanger
+}
+
+func NewUpstreamHost(host string, timeout time.Duration) *UpstreamHost {
+	h, err := dnsutil.ParseHostPort(host, "53")
+	if err != nil {
+		return nil
+	}
+
+	uh := &UpstreamHost{
+		Name:        h,
+		Conns:       0,
+		Fails:       0,
+		FailTimeout: 10 * time.Second,
+		Unhealthy:   false,
+		Exchanger:   newDNSEx(h),
+
+		CheckDown: func(uh *UpstreamHost) bool {
+			if uh.Unhealthy {
+				return true
+			}
+
+			fails := atomic.LoadInt32(&uh.Fails)
+			if fails >= 2 {
+				return true
+			}
+			return false
+		},
+		WithoutPathPrefix: "",
+	}
+
+	uh.SetTimeout(timeout)
+	return uh
 }
 
 func (uh *UpstreamHost) SetQueryTimeout(timeout time.Duration) {

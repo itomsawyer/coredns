@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-func TestGetDstView(t *testing.T) {
-	nl, err := GetDstView(nil, nil, nil, nil, 0, 1)
+func TestGetSrcView(t *testing.T) {
+	nl, err := GetSrcView(nil, nil, nil, nil, 0, 1)
 	if err != nil {
 		t.Error(err)
 		t.Fail()

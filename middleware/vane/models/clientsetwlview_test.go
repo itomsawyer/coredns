@@ -5,7 +5,7 @@ import (
 )
 
 func TestGetClientSetWL(t *testing.T) {
-	nl, err := GetAllClientSetWLView(nil, nil, nil, nil, nil, 0, 1)
+	nl, err := GetClientSetWLView(nil, nil, nil, nil, 0, 1)
 	if err != nil {
 		t.Error(err)
 		t.Fail()

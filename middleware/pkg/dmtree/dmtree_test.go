@@ -11,8 +11,17 @@ func TestDmTreeRoot(t *testing.T) {
 	)
 
 	dt := new(DmTree)
-	dt.Insert(".", 1)
-	dt.Insert("", 2)
+	err := dt.Insert(".", 1)
+	if err != nil {
+		t.Errorf("unexpected error")
+		return
+	}
+
+	err = dt.Insert("", 2)
+	if err == nil {
+		t.Errorf("unexpected no error")
+		return
+	}
 
 	v, ok = dt.Find("a.")
 	if !ok {
@@ -22,7 +31,31 @@ func TestDmTreeRoot(t *testing.T) {
 
 	t.Log(dt)
 
-	if v == nil && v.(int) != 1 {
+	if v == nil || v.(int) != 1 {
+		t.Errorf("unexpected value")
+		return
+	}
+}
+
+func TestDmTreeForceInsert(t *testing.T) {
+	var (
+		ok bool
+		v  interface{}
+	)
+
+	dt := new(DmTree)
+	dt.Insert(".", 1)
+	dt.ForceInsert("", 2)
+
+	v, ok = dt.Find("a.")
+	if !ok {
+		t.Errorf("unexpected not found")
+		return
+	}
+
+	t.Log(dt)
+
+	if v == nil || v.(int) != 2 {
 		t.Errorf("unexpected value")
 		return
 	}

@@ -83,3 +83,15 @@ func TestParseHostPort(t *testing.T) {
 		}
 	}
 }
+
+func TestParseIPNet(t *testing.T) {
+	ipnet, err := ParseIPNet("8.8.8.8", 24)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if ipnet.String() != "8.8.8.0/24" {
+		t.Log("unexpected value", ipnet)
+		t.Fail()
+	}
+}
