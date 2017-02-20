@@ -19,10 +19,6 @@ type Vane struct {
 func (v Vane) Name() string { return "vane" }
 
 func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	var (
-		remoteAddr net.IP
-	)
-
 	if len(r.Question) == 0 {
 		return 0, nil
 	}
@@ -33,13 +29,7 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 	}
 
 	state := request.Request{W: w, Req: r}
-
-	subnet := edns.ReadClientSubnet(r)
-	if subnet == nil {
-		remoteAddr = net.ParseIP(state.IP()).To4()
-	} else {
-		remoteAddr = subnet.Address
-	}
+	remoteAddr := state.GetRemoteAddr()
 
 	fmt.Println(remoteAddr)
 

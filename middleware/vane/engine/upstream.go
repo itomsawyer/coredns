@@ -10,15 +10,10 @@ type Upstreamer interface {
 	Select() []*proxy.UpstreamHost
 }
 
-type Policy interface {
-	Select(pool HostPool) []*proxy.UpstreamHost
-}
-
 type Upstream struct {
 	Name   string
 	Hosts  HostPool
-	Policy Policy
-	sorted bool
+	Policy PolicyBuilder
 }
 
 func NewUpstream(name string) *Upstream {
@@ -30,17 +25,12 @@ func NewUpstream(name string) *Upstream {
 }
 
 func (p *Upstream) AddHost(uh *proxy.UpstreamHost, priority int) {
-	p.Hosts = p.Hosts.Add(uh, priority)
-	p.sorted = false
-}
-
-func (p *Upstream) SetPolicy(policy Policy) {
-	p.Policy = policy
-}
-
-func (p *Upstream) Sort() {
+	p.Hosts.Add(uh, priority)
 	sort.Sort(p.Hosts)
-	p.sorted = true
+}
+
+func (p *Upstream) SetPolicy(policy PolicyBuilder) {
+	p.Policy = policy
 }
 
 type HostPool []HostPoolEle
@@ -57,13 +47,13 @@ func (hp HostPool) Swap(i, j int) {
 	hp[i], hp[j] = hp[j], hp[i]
 }
 
-func (hp HostPool) Add(uh *proxy.UpstreamHost, priority int) HostPool {
+func (hp *HostPool) Add(uh *proxy.UpstreamHost, priority int) {
 	if hp == nil {
-		hp = make([]HostPoolEle, 0, 1)
+		*hp = make([]HostPoolEle, 0, 1)
 	}
 
-	hp = append(hp, HostPoolEle{Priority: priority, Host: uh})
-	return hp
+	*hp = append(*hp, HostPoolEle{Priority: priority, Host: uh})
+	return
 }
 
 type HostPoolEle struct {

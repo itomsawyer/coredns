@@ -17,7 +17,6 @@ func TestAddUpstream(t *testing.T) {
 	upstream.AddHost(b, 2)
 	upstream.AddHost(c, 3)
 	upstream.AddHost(a, 1)
-	upstream.Sort()
 
 	t.Log(upstream)
 }
