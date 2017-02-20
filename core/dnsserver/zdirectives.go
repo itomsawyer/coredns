@@ -30,6 +30,7 @@ var directives = []string{
 		"secondary",
 		"etcd",
 		"kubernetes",
+		"vane",
 		"proxy",
 		"httpprox",
 		"whoami",

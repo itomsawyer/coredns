@@ -8,6 +8,7 @@ import (
 
 type Upstreamer interface {
 	Select() []*proxy.UpstreamHost
+	GetPolicy() Policy
 }
 
 type Upstream struct {
@@ -20,8 +21,12 @@ func NewUpstream(name string) *Upstream {
 	return &Upstream{
 		Name:   name,
 		Hosts:  HostPool{},
-		Policy: nil, //TODO defaultPolicy
+		Policy: NewSimplePolicy,
 	}
+}
+
+func (p *Upstream) GetPolicy() Policy {
+	return p.Policy(p.Hosts)
 }
 
 func (p *Upstream) AddHost(uh *proxy.UpstreamHost, priority int) {

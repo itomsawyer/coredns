@@ -19,4 +19,14 @@ func TestAddUpstream(t *testing.T) {
 	upstream.AddHost(a, 1)
 
 	t.Log(upstream)
+
+	p := upstream.GetPolicy()
+	if p == nil {
+		t.Errorf("unexpected nil policy")
+	}
+
+	t.Log(p.Select())
+	t.Log(p.Select())
+	t.Log(p.Select())
+	t.Log(p.Select())
 }

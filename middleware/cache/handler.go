@@ -24,13 +24,10 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		cip := state.GetRemoteAddr()
 		fmt.Println(cip)
 		if cip != nil {
-			c, err := engine.GetClientSet(cip)
-			if err == nil {
-				tag = strconv.Itoa(c.ID)
-				fmt.Println(tag)
-			} else {
-				fmt.Println(err)
-			}
+			cid := engine.GetClientSetID(cip)
+			tag = strconv.Itoa(cid)
+			ctx = context.WithValue(ctx, "clientset_id", cid)
+			fmt.Println("find clientset_id in cache handler:", tag)
 		}
 	}
 

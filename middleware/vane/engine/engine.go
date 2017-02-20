@@ -11,6 +11,10 @@ import (
 	"github.com/miekg/coredns/middleware/proxy"
 )
 
+var (
+	defaultClientSetID = 1
+)
+
 /*
 type Enginer interface {
 	GetClientSetID(ip net.IP) (int, error)
@@ -31,10 +35,23 @@ type Engine struct {
 	UpstreamHosts map[string]*proxy.UpstreamHost
 	Upstream      map[int]*Upstream
 
-	SrcView SrcView // <dmpoolid, clientsetid> => {Route, Upstream}
-	DstView DstView // <dmpoolid, netlintid> => netlinksetid
+	SrcView // <dmpoolid, clientsetid> => {Route, Upstream}
+	DstView // <dmpoolid, netlintid> => netlinksetid
 
-	RouteMap RouteMap // <routeid, netlinksetid> => Route
+	RouteMap // <routeid, netlinksetid> => Route
+}
+
+func (e *Engine) GetClientSetID(ip net.IP) (clientset_id int) {
+	cs, err := e.GetClientSet(ip)
+	if err != nil {
+		return defaultClientSetID
+	}
+
+	if cs.ID > 0 {
+		return cs.ID
+	}
+
+	return defaultClientSetID
 }
 
 func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
@@ -87,12 +104,29 @@ func (e *Engine) GetDomain(domain string) (Domain, error) {
 	return d, nil
 }
 
-func (e *Engine) GetRoute(clientset_id int, domainpool_id int, netlink_id int) {
+func (e *Engine) GetRoute(routeset_id int, netlinkset_id int) RouteSlice {
+	rk := RouteKey{
+		RouteSetID:   routeset_id,
+		NetLinkSetID: netlinkset_id,
+	}
+	if v, ok := e.RouteMap[rk]; ok {
+		return v
+	}
 
+	return nil
 }
 
-func (e *Engine) GetUpstream() {
+func (e *Engine) GetView(clientset_id int, domainpool_id int) (View, error) {
+	vk := ViewKey{
+		ClientSetID:  clientset_id,
+		DomainPoolID: domainpool_id,
+	}
 
+	if v, ok := e.SrcView[vk]; ok {
+		return v, nil
+	}
+
+	return View{}, errors.New("View not found")
 }
 
 func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string) error {
