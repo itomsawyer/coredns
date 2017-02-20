@@ -24,7 +24,7 @@ func (v VaneEngine) Engine() *Engine {
 func (v *VaneEngine) Name() string { return "vane_engine" }
 
 func (v *VaneEngine) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	fmt.Println("Enter VaneEngine", v.E)
+	fmt.Println("Enter VaneEngine")
 	vctx := context.WithValue(ctx, "vane_engine", v.Engine())
 	ret, err := middleware.NextOrFailure(v.Name(), v.Next, vctx, w, r)
 	fmt.Println("Leave VaneEngine")

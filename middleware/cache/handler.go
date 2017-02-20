@@ -2,6 +2,7 @@ package cache
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/miekg/coredns/middleware"
@@ -15,12 +16,23 @@ import (
 
 // ServeDNS implements the middleware.Handler interface.
 func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	v := ctx.Value("vane_engine")
-	if engine, ok := v.(*vane.Engine); ok {
-		fmt.Println("get vane engine", engine)
-	}
-
 	state := request.Request{W: w, Req: r}
+
+	v := ctx.Value("vane_engine")
+	tag := "0"
+	if engine, ok := v.(*vane.Engine); ok && engine != nil {
+		cip := state.GetRemoteAddr()
+		fmt.Println(cip)
+		if cip != nil {
+			c, err := engine.GetClientSet(cip)
+			if err == nil {
+				tag = strconv.Itoa(c.ID)
+				fmt.Println(tag)
+			} else {
+				fmt.Println(err)
+			}
+		}
+	}
 
 	qname := state.Name()
 	qtype := state.QType()
@@ -31,7 +43,7 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	do := state.Do() // TODO(): might need more from OPT record? Like the actual bufsize?
 
-	if i, ok, expired := c.get(qname, qtype, do); ok && !expired {
+	if i, ok, expired := c.get(qname, qtype, do, tag); ok && !expired {
 		resp := i.toMsg(r)
 		state.SizeAndDo(resp)
 		resp, _ = state.Scrub(resp)
@@ -40,15 +52,19 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 		return dns.RcodeSuccess, nil
 	}
 
-	crr := &ResponseWriter{w, c}
+	crr := &ResponseWriter{
+		ResponseWriter: w,
+		Cache:          c,
+		Tag:            tag,
+	}
 	return middleware.NextOrFailure(c.Name(), c.Next, ctx, crr, r)
 }
 
 // Name implements the Handler interface.
 func (c *Cache) Name() string { return "cache" }
 
-func (c *Cache) get(qname string, qtype uint16, do bool) (*item, bool, bool) {
-	k := rawKey(qname, qtype, do)
+func (c *Cache) get(qname string, qtype uint16, do bool, keySuffix string) (*item, bool, bool) {
+	k := rawKey(qname, qtype, do, keySuffix)
 
 	if i, ok := c.ncache.Get(k); ok {
 		cacheHits.WithLabelValues(Denial).Inc()

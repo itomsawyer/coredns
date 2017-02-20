@@ -33,6 +33,15 @@ func (r *Request) NewWithQuestion(name string, typ uint16) Request {
 	return req1
 }
 
+func (r *Request) GetRemoteAddr() net.IP {
+	subnet := edns.ReadClientSubnet(r.Req)
+	if subnet == nil {
+		return net.ParseIP(r.IP()).To4()
+	} else {
+		return subnet.Address
+	}
+}
+
 // IP gets the (remote) IP address of the client making the request.
 func (r *Request) IP() string {
 	ip, _, err := net.SplitHostPort(r.W.RemoteAddr().String())

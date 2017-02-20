@@ -37,31 +37,43 @@ type Engine struct {
 	RouteMap RouteMap // <routeid, netlinksetid> => Route
 }
 
-func (e *Engine) GetClientSetID(ip net.IP) (int, error) {
+func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
 	if ip == nil {
-		return 0, errors.New("client ip is nil")
+		return ClientSet{}, errors.New("client ip is nil")
 	}
 
-	id, found, err := e.ClientSet.Get(ip)
+	v, found, _ := e.ClientSet.GetRaw(ip)
 	if !found {
-		return 0, errors.New("ClientSet not found")
+		return ClientSet{}, errors.New("ClientSet not found")
 	}
-	return id, err
+
+	cs, ok := v.(ClientSet)
+	if !ok {
+		return ClientSet{}, errors.New("Internal Error: ClientSet type assert fail")
+	}
+
+	return cs, nil
 }
 
-func (e *Engine) GetNetLinkID(ip net.IP) (int, error) {
+func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 	if ip == nil {
-		return 0, errors.New("target ip is nil")
+		return NetLink{}, errors.New("target ip is nil")
 	}
 
-	id, found, err := e.NetLink.Get(ip)
+	v, found, _ := e.NetLink.GetRaw(ip)
 	if !found {
-		return 0, errors.New("NetLink not found")
+		return NetLink{}, errors.New("NetLink not found")
 	}
-	return id, err
+
+	nl, ok := v.(NetLink)
+	if !ok {
+		return NetLink{}, errors.New("Internal Error: NetLink type assert fail")
+	}
+
+	return nl, nil
 }
 
-func (e *Engine) GetDomainID(domain string) (Domain, error) {
+func (e *Engine) GetDomain(domain string) (Domain, error) {
 	v, ok := e.Domain.Find(domain)
 	if !ok && v == nil {
 		return Domain{}, errors.New("domain pool id not found")
@@ -85,7 +97,7 @@ func (e *Engine) GetUpstream() {
 
 func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string) error {
 	cs := ClientSet{
-		Id:    id,
+		ID:    id,
 		Name:  name,
 		IPNet: ipnet,
 	}
@@ -98,7 +110,7 @@ func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string) error {
 
 func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string) error {
 	nl := NetLink{
-		Id:     id,
+		ID:     id,
 		Isp:    isp,
 		Region: region,
 		IPNet:  ipnet,

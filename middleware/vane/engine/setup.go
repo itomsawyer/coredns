@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/miekg/coredns/core/dnsserver"
 	"github.com/miekg/coredns/middleware"
@@ -71,6 +72,7 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 	})
 
 	c.OnStartup(func() error {
+		fmt.Println("engine start")
 		return vane.Reload()
 	})
 

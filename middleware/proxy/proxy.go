@@ -135,45 +135,6 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	span = ot.SpanFromContext(ctx)
 	state := request.Request{W: w, Req: r}
 
-	/*
-		if v := ctx.Value("upstream_host"); v != nil {
-			host, ok := v.(*UpstreamHost)
-
-			if ok && host != nil {
-
-				if span != nil {
-					child = span.Tracer().StartSpan("exchange", ot.ChildOf(span.Context()))
-					ctx = ot.ContextWithSpan(ctx, child)
-				}
-
-				atomic.AddInt64(&host.Conns, 1)
-
-				reply, backendErr := host.Exchange(state)
-
-				atomic.AddInt64(&host.Conns, -1)
-
-				if child != nil {
-					child.Finish()
-				}
-
-				if backendErr == nil {
-					w.WriteMsg(reply)
-					return 0, nil
-				}
-
-				timeout := host.FailTimeout
-				if timeout == 0 {
-					timeout = 10 * time.Second
-				}
-				atomic.AddInt32(&host.Fails, 1)
-				go func(host *UpstreamHost, timeout time.Duration) {
-					time.Sleep(timeout)
-					atomic.AddInt32(&host.Fails, -1)
-				}(host, timeout)
-			}
-		}
-	*/
-
 	for _, upstream := range p.Upstreams {
 		start := time.Now()
 
@@ -182,9 +143,7 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		for time.Now().Sub(start) < tryDuration {
 			host := upstream.Select()
 			if host == nil {
-
 				RequestDuration.WithLabelValues(state.Proto(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
-
 				return dns.RcodeServerFailure, errUnreachable
 			}
 
@@ -205,9 +164,7 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 			if backendErr == nil {
 				w.WriteMsg(reply)
-
 				RequestDuration.WithLabelValues(state.Proto(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
-
 				return 0, nil
 			}
 			timeout := host.FailTimeout
