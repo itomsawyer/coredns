@@ -10,7 +10,6 @@ type Policy interface {
 
 type PolicyBuilder func(HostPool) Policy
 
-// XXX: Require hp to be sorted by priority
 func NewSimplePolicy(hp HostPool) Policy {
 	if len(hp) == 0 {
 		return nil
@@ -18,38 +17,52 @@ func NewSimplePolicy(hp HostPool) Policy {
 
 	return &SimplePolicy{
 		pool: hp,
-		prio: hp[0].Priority,
+		//prio: hp[0].Priority,
+		cur: 0,
+		len: len(hp),
 	}
 }
 
 type SimplePolicy struct {
 	pool HostPool
-	prio int
-	done bool
+
+	cur int
+	len int
 }
 
+// Require HostPool to be sorted by priority
 func (p *SimplePolicy) Select() (uhs []*proxy.UpstreamHost) {
 	var i int
 
-	if len(p.pool) == 0 || p.done {
-		return
+	if p.cur < 0 || p.cur >= p.len {
+		return nil
 	}
 
 	found := false
-	for i = 0; i < len(p.pool); i++ {
-		e := p.pool[i]
-		if e.Priority == p.prio {
-			uhs = append(uhs, e.Host)
-			found = true
-		} else if found {
-			p.prio = e.Priority
-			break
+	for i = p.cur; i < p.len; i++ {
+		if p.pool[i].Priority != p.pool[p.cur].Priority {
+			p.cur = i
+			if found {
+				return
+			} else {
+				i--
+				continue
+			}
 		}
+
+		uh := p.pool[i].Host
+		if uh == nil || uh.Down() {
+			continue
+		}
+
+		uhs = append(uhs, uh)
+		found = true
 	}
 
-	if i == len(p.pool) {
-		p.done = true
+	if i == p.len {
+		p.cur = i
 	}
 
 	return
+
 }

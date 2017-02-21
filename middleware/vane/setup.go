@@ -21,13 +21,6 @@ func init() {
 }
 
 func setup(c *caddy.Controller) error {
-	/*
-		vane, err := parseVane(c)
-		if err != nil {
-			return err
-		}
-	*/
-
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
 		v := new(Vane)
 		v.Next = next
@@ -36,66 +29,3 @@ func setup(c *caddy.Controller) error {
 
 	return nil
 }
-
-/*
-func parseVane(c *caddy.Controller) (vane *Vane, err error) {
-	vane = &Vane{
-		DBHost: "root:@localhost/iwg",
-	}
-
-	for c.Next() {
-		if c.Val() == "vane" {
-			args := c.RemainingArgs()
-			if len(args) > 0 {
-				return nil, c.ArgErr()
-			}
-
-			for c.NextBlock() {
-				switch c.Val() {
-				case "db":
-					args := c.RemainingArgs()
-					if len(args) == 0 {
-						return nil, c.ArgErr()
-					}
-
-					if len(args) >= 2 {
-						e := GetLoader(args[0])
-						if e == nil {
-							return nil, fmt.Errorf("DB engine %s does not exists", args[0])
-						}
-
-						vane.DB = e
-						vane.DBHost = args[1]
-					} else {
-						vane.DB = GetLoader("default")
-						vane.DBHost = args[0]
-					}
-
-				default:
-					return nil, c.ArgErr()
-				}
-			}
-		}
-	}
-
-	if vane.DBHost == "" {
-		return nil, ErrNoDBHost
-	}
-
-	c.OnFirstStartup(func() error {
-		return vane.DB.Init(vane.DBHost)
-	})
-
-	c.OnStartup(func() error {
-		e, err := vane.DB.LoadAll()
-		if err != nil {
-			return err
-		}
-
-		vane.engine = e
-		return nil
-	})
-
-	return vane, nil
-}
-*/

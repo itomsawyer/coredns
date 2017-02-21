@@ -80,6 +80,7 @@ type RouteIter struct {
 	len   int
 }
 
+// Require RouteSlice to be sorted which is ensured by RouteMap.Add
 func (ri *RouteIter) Next() []Route {
 	if ri.cur < 0 || ri.cur >= ri.len {
 		return nil

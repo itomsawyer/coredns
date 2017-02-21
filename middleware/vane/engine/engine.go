@@ -12,7 +12,9 @@ import (
 )
 
 var (
-	defaultClientSetID = 1
+	defaultClientSetID  = 1
+	defaultDomainPoolID = 1
+	defaultNetLinkID    = 1
 )
 
 /*
@@ -72,6 +74,19 @@ func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
 	return cs, nil
 }
 
+func (e *Engine) GetNetLinkID(ip net.IP) int {
+	nl, err := e.GetNetLink(ip)
+	if err != nil {
+		return defaultNetLinkID
+	}
+
+	if nl.ID <= 0 {
+		return defaultNetLinkID
+	}
+
+	return nl.ID
+}
+
 func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 	if ip == nil {
 		return NetLink{}, errors.New("target ip is nil")
@@ -90,6 +105,19 @@ func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 	return nl, nil
 }
 
+func (e *Engine) GetDomainPoolID(domain string) int {
+	dm, err := e.GetDomain(domain)
+	if err != nil {
+		return defaultDomainPoolID
+	}
+
+	if dm.DmPoolID <= 0 {
+		return defaultDomainPoolID
+	}
+
+	return dm.DmPoolID
+}
+
 func (e *Engine) GetDomain(domain string) (Domain, error) {
 	v, ok := e.Domain.Find(domain)
 	if !ok && v == nil {
@@ -104,10 +132,15 @@ func (e *Engine) GetDomain(domain string) (Domain, error) {
 	return d, nil
 }
 
-func (e *Engine) GetRoute(routeset_id int, netlinkset_id int) RouteSlice {
+func (e *Engine) GetRoute(routeset_id int, domainpool_id int, netlink_id int) RouteSlice {
+	dl, err := e.GetDomainLink(domainpool_id, netlink_id)
+	if err != nil {
+		return nil
+	}
+
 	rk := RouteKey{
 		RouteSetID:   routeset_id,
-		NetLinkSetID: netlinkset_id,
+		NetLinkSetID: dl.NetLinkSetID,
 	}
 	if v, ok := e.RouteMap[rk]; ok {
 		return v
@@ -127,6 +160,19 @@ func (e *Engine) GetView(clientset_id int, domainpool_id int) (View, error) {
 	}
 
 	return View{}, errors.New("View not found")
+}
+
+func (e *Engine) GetDomainLink(domainpool_id, netlink_id int) (DomainLink, error) {
+	dlk := DomainLinkKey{
+		DomainPoolID: domainpool_id,
+		NetLinkID:    netlink_id,
+	}
+
+	if dl, ok := e.DstView[dlk]; ok {
+		return dl, nil
+	}
+
+	return DomainLink{}, errors.New("DomainLink not found")
 }
 
 func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string) error {

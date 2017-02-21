@@ -29,8 +29,6 @@ func TestDmTreeRoot(t *testing.T) {
 		return
 	}
 
-	t.Log(dt)
-
 	if v == nil || v.(int) != 1 {
 		t.Errorf("unexpected value")
 		return
@@ -52,8 +50,6 @@ func TestDmTreeForceInsert(t *testing.T) {
 		t.Errorf("unexpected not found")
 		return
 	}
-
-	t.Log(dt)
 
 	if v == nil || v.(int) != 2 {
 		t.Errorf("unexpected value")
@@ -208,7 +204,7 @@ func TestDmTreeWild2(t *testing.T) {
 		t.Errorf("expect value 1 get", v)
 	}
 
-	v, ok = dt.Find("static.qq.com")
+	v, ok = dt.Find("static.qq.com.")
 	if !ok {
 		t.Errorf("unexpected not found")
 	}
