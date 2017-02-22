@@ -72,8 +72,9 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 	})
 
 	c.OnStartup(func() error {
+		err := vane.Reload()
 		fmt.Println("engine start")
-		return vane.Reload()
+		return err
 	})
 
 	return vane, nil

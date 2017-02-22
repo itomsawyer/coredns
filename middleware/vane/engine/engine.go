@@ -7,7 +7,7 @@ import (
 
 	"github.com/miekg/coredns/middleware/pkg/dmtree"
 	"github.com/miekg/coredns/middleware/pkg/dnsutil"
-	"github.com/miekg/coredns/middleware/pkg/iptree"
+	"github.com/miekg/coredns/middleware/pkg/nettree"
 	"github.com/miekg/coredns/middleware/proxy"
 )
 
@@ -29,9 +29,13 @@ type Enginer interface {
 }
 */
 
+var (
+	ErrDuplicateUpstream = errors.New("Duplicate upstream (policy)")
+)
+
 type Engine struct {
-	ClientSet *iptree.IPTree
-	NetLink   *iptree.IPTree
+	ClientSet *nettree.NetTree
+	NetLink   *nettree.NetTree
 	Domain    *dmtree.DmTree
 
 	UpstreamHosts map[string]*proxy.UpstreamHost
@@ -61,8 +65,12 @@ func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
 		return ClientSet{}, errors.New("client ip is nil")
 	}
 
-	v, found, _ := e.ClientSet.GetRaw(ip)
-	if !found {
+	if e.ClientSet == nil {
+		return ClientSet{}, errors.New("ClientSet not found")
+	}
+
+	v := e.ClientSet.FindByIP(ip)
+	if v == nil {
 		return ClientSet{}, errors.New("ClientSet not found")
 	}
 
@@ -92,8 +100,12 @@ func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 		return NetLink{}, errors.New("target ip is nil")
 	}
 
-	v, found, _ := e.NetLink.GetRaw(ip)
-	if !found {
+	if e.NetLink == nil {
+		return NetLink{}, errors.New("NetLink not found")
+	}
+
+	v := e.NetLink.FindByIP(ip)
+	if v == nil {
 		return NetLink{}, errors.New("NetLink not found")
 	}
 
@@ -106,6 +118,7 @@ func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 }
 
 func (e *Engine) GetDomainPoolID(domain string) int {
+
 	dm, err := e.GetDomain(domain)
 	if err != nil {
 		return DefaultDomainPoolID
@@ -119,6 +132,10 @@ func (e *Engine) GetDomainPoolID(domain string) int {
 }
 
 func (e *Engine) GetDomain(domain string) (Domain, error) {
+	if e.Domain == nil {
+		return Domain{}, errors.New("NetLink not found")
+	}
+
 	v, ok := e.Domain.Find(domain)
 	if !ok && v == nil {
 		return Domain{}, errors.New("domain pool id not found")
@@ -133,6 +150,10 @@ func (e *Engine) GetDomain(domain string) (Domain, error) {
 }
 
 func (e *Engine) GetRoute(routeset_id int, domainpool_id int, netlink_id int) RouteSlice {
+	if e.RouteMap == nil {
+		return nil
+	}
+
 	dl, err := e.GetDomainLink(domainpool_id, netlink_id)
 	if err != nil {
 		return nil
@@ -150,6 +171,10 @@ func (e *Engine) GetRoute(routeset_id int, domainpool_id int, netlink_id int) Ro
 }
 
 func (e *Engine) GetView(clientset_id int, domainpool_id int) (View, error) {
+	if e.SrcView == nil {
+		return View{}, errors.New("View not found")
+	}
+
 	vk := ViewKey{
 		ClientSetID:  clientset_id,
 		DomainPoolID: domainpool_id,
@@ -163,6 +188,10 @@ func (e *Engine) GetView(clientset_id int, domainpool_id int) (View, error) {
 }
 
 func (e *Engine) GetDomainLink(domainpool_id, netlink_id int) (DomainLink, error) {
+	if e.DstView == nil {
+		return DomainLink{}, errors.New("DomainLink not found")
+	}
+
 	dlk := DomainLinkKey{
 		DomainPoolID: domainpool_id,
 		NetLinkID:    netlink_id,
@@ -182,10 +211,10 @@ func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string) error {
 		IPNet: ipnet,
 	}
 	if e.ClientSet == nil {
-		e.ClientSet = iptree.New()
+		e.ClientSet = new(nettree.NetTree)
 	}
 
-	return e.ClientSet.AddRaw(cs.IPNet, cs)
+	return e.ClientSet.InsertByIPNet(cs.IPNet, cs)
 }
 
 func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string) error {
@@ -197,10 +226,10 @@ func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string)
 	}
 
 	if e.NetLink == nil {
-		e.NetLink = iptree.New()
+		e.NetLink = new(nettree.NetTree)
 	}
 
-	return e.NetLink.AddRaw(nl.IPNet, nl)
+	return e.NetLink.InsertByIPNet(nl.IPNet, nl)
 }
 
 func (e *Engine) AddDomain(id int, domain string, dmpool_id int, dmpool_name string) error {
@@ -244,13 +273,18 @@ func (e *Engine) AddUpstreamHost(host string, timeout time.Duration, unhealthy b
 	return uh, nil
 }
 
-func (e *Engine) AddUpstream(policy int, name string) (*Upstream, error) {
+func (e *Engine) AddUpstream(policy int, name string) *Upstream {
 	if e.Upstream == nil {
 		e.Upstream = make(map[int]*Upstream, 8)
 	}
+
+	if u, err := e.GetUpstreamByID(policy); err == nil {
+		return u
+	}
+
 	u := NewUpstream(name)
 	e.Upstream[policy] = u
-	return u, nil
+	return u
 }
 
 func (e *Engine) GetUpstreamByID(policy int) (*Upstream, error) {

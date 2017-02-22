@@ -89,6 +89,10 @@ try_again:
 		return dns.RcodeServerFailure, errUnreachable
 	}
 
+	for _, e := range view.Upstream.Hosts {
+		fmt.Println("host in upstream", e)
+	}
+
 	policy := view.Upstream.GetPolicy()
 	if policy == nil {
 
@@ -118,9 +122,19 @@ try_again:
 			return dns.RcodeServerFailure, errUnreachable
 		}
 
-		fmt.Println("found upstream host", uphosts)
+		for _, uh := range uphosts {
+			fmt.Println("found upstream host", uh)
+		}
 
 		replys := DNSExWithTimeout(uphosts, state, 1*time.Second)
+		for _, r := range replys {
+			fmt.Println("get replys", r)
+		}
+
+		if len(replys) == 0 {
+			fmt.Println("get no replys")
+			continue
+		}
 
 		if q.Qtype != dns.TypeA {
 			if len(replys) > 0 {
@@ -130,7 +144,7 @@ try_again:
 			continue
 		}
 
-		better := make([]dns.RR, 0, 1)
+		better := addrSet{}
 		for _, reply := range replys {
 			rrset := reply.Answer
 			for _, rr := range rrset {
@@ -141,14 +155,15 @@ try_again:
 						if replyMsg == nil {
 							replyMsg = reply
 						}
-						better = append(better, rr)
+						better.Add(a)
 					}
 				}
 			}
 		}
 
 		if len(better) > 0 {
-			replyMsg.Answer = better
+			replyMsg.Answer = better.RRSet()
+			fmt.Println("write anwser:", replyMsg)
 			w.WriteMsg(replyMsg)
 			return 0, nil
 		}
@@ -162,8 +177,9 @@ func DNSExWithTimeout(uphosts []*proxy.UpstreamHost, state request.Request, time
 		uh := uphosts[0]
 
 		reply, backendErr := uh.DoExchange(state)
-		if backendErr == nil {
+		if backendErr != nil {
 			//TODO LOG
+			fmt.Println(backendErr)
 			uh.Fail()
 			return nil
 		}
@@ -217,4 +233,27 @@ func DNSExWithTimeout(uphosts []*proxy.UpstreamHost, state request.Request, time
 	}
 
 	return
+}
+
+type addrSet map[string]*dns.A
+
+func (p addrSet) Add(a *dns.A) {
+	if a == nil || a.A == nil {
+		return
+	}
+
+	p[a.A.String()] = a
+}
+
+func (p addrSet) RRSet() []dns.RR {
+	if len(p) == 0 {
+		return nil
+	}
+
+	s := make([]dns.RR, 0, len(p))
+	for _, a := range p {
+		s = append(s, a)
+	}
+
+	return s
 }

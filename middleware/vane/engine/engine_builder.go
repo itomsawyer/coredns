@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/miekg/coredns/middleware/pkg/dnsutil"
@@ -190,10 +191,9 @@ func (b *EngineBuilder) BuildDomainView(e *Engine) error {
 
 func (b *EngineBuilder) BuildUpstream(e *Engine) error {
 	for _, v := range b.PolicyView {
-		upstream, err := e.AddUpstream(v.PolicyId, v.PolicyName)
-		if err != nil {
-			return err
-		}
+		upstream := e.AddUpstream(v.PolicyId, v.PolicyName)
+
+		fmt.Println(upstream)
 
 		//TODO configurable timeout and healthy
 		uh, err := e.AddUpstreamHost(v.Addr, 3*time.Second, false)
@@ -202,6 +202,10 @@ func (b *EngineBuilder) BuildUpstream(e *Engine) error {
 		}
 
 		upstream.AddHost(uh, v.Priority)
+
+		for _, e := range upstream.Hosts {
+			fmt.Println("host in upstream", e)
+		}
 	}
 
 	return nil

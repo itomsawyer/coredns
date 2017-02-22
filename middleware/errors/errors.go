@@ -56,6 +56,9 @@ func (h errorHandler) recovery(ctx context.Context, w dns.ResponseWriter, r *dns
 		return
 	}
 
+	callers := getCallers(rec)
+	fmt.Printf("recovered from panic %q. Call stack:\n%v", rec, callers)
+
 	state := request.Request{W: w, Req: r}
 	// Obtain source of panic
 	// From: https://gist.github.com/swdunlop/9629168
@@ -104,6 +107,19 @@ func debugMsg(rcode int, r *dns.Msg) *dns.Msg {
 	answer := new(dns.Msg)
 	answer.SetRcode(r, rcode)
 	return answer
+}
+
+func getCallers(r interface{}) string {
+	callers := ""
+	for i := 0; true; i++ {
+		_, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		callers = callers + fmt.Sprintf("%v:%v\n", file, line)
+	}
+
+	return callers
 }
 
 const timeFormat = "02/Jan/2006:15:04:05 -0700"
