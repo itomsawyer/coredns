@@ -70,6 +70,8 @@ create table domain_pool (
 id int not null auto_increment,
 name varchar(127) not null ,
 info varchar(255) not null default "",
+enable bool not null default true,
+unavailable smallint unsigned not null default 0,
 primary key (id),
 unique key (name)
 )DEFAULT CHARSET=utf8 comment "serve domains set";
@@ -107,9 +109,10 @@ unique key(name)
 create table netlink (
 id int not null auto_increment,
 isp  varchar(127) not null,
-region varchar(127) not null,
+region varchar(127) not null default "",
 typ varchar(32) not null default "normal",
-primary key(id)
+primary key(id),
+unique key(isp, region)
 )DEFAULT CHARSET=utf8 comment "netlink (isp + province or CP) of a target ip";
 
 insert into netlink (isp, region) values("unknown", "unknown");
@@ -285,7 +288,8 @@ select ipnet_wl.id as ipnet_wl_id, ip_start, inet_aton(ip_start) as ip_start_int
 
 
 create ALGORITHM = MERGE view domain_view as
-select domain.id as domain_id, domain, domain_pool_id, domain_pool.name as pool_name from domain join domain_pool on domain.domain_pool_id= domain_pool.id;
+select domain.id as domain_id, domain, domain_pool_id, domain_pool.name as pool_name from domain join domain_pool on domain.domain_pool_id= domain_pool.id
+where domain_pool.enable = true and domain_pool.unavailable = 0 ;
 
 create ALGORITHM = MERGE view netlink_view as
 select iptable.id as iptable_id, ip_start, inet_aton(ip_start) as ip_start_int, ip_end, inet_aton(ip_end) as ip_end_int, ipnet, mask, netlink_id, isp, region, typ
@@ -298,14 +302,14 @@ from netlink join iptable_wl on iptable_wl.netlink_id = netlink.id;
 create ALGORITHM = MERGE view dst_view as
 select domainlink.domain_pool_id, domainlink.netlink_id, domainlink.netlinkset_id, domain_pool.name as domain_pool_name, isp, region
 from  domain_pool, netlink, domainlink
-where domain_pool.id = domainlink.domain_pool_id and netlink.id = domainlink.netlink_id
+where domain_pool.id = domainlink.domain_pool_id and netlink.id = domainlink.netlink_id and domain_pool.enable = true and domain_pool.unavailable = 0
 and domainlink.enable = true;
 
 create ALGORITHM = MERGE view route_view as
 select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, min(route.priority) as route_priority, max(route.score) as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
 from netlinkset, outlink, route, routeset
 where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
-and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0
+and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0
 group by routeset_id;
 
 
@@ -313,7 +317,7 @@ create ALGORITHM = MERGE view base_route_view as
 select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, route.priority as route_priority, route.score as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
 from netlinkset, outlink, route, routeset
 where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
-and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0;
+and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0;
 
 
 /*
@@ -348,4 +352,4 @@ create ALGORITHM = MERGE view src_view as
 select clientset_id, clientset.name as clientset_name, domain_pool_id, domain_pool.name as domain_pool_name, routeset_id, routeset.name as routeset_name, policy_id, policy.name as policy_name
 from clientset, domain_pool, viewer, routeset, policy
 where clientset.id = viewer.clientset_id and domain_pool.id = viewer.domain_pool_id and routeset.id = viewer.routeset_id and policy.id = viewer.policy_id
-and viewer.enable = true
+and domain_pool.enable = true and domain_pool.unavailable = 0 and viewer.enable = true;
