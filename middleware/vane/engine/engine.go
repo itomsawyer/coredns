@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	defaultClientSetID  = 1
-	defaultDomainPoolID = 1
-	defaultNetLinkID    = 1
+	DefaultClientSetID  = 1
+	DefaultDomainPoolID = 1
+	DefaultNetLinkID    = 1
 )
 
 /*
@@ -46,14 +46,14 @@ type Engine struct {
 func (e *Engine) GetClientSetID(ip net.IP) (clientset_id int) {
 	cs, err := e.GetClientSet(ip)
 	if err != nil {
-		return defaultClientSetID
+		return DefaultClientSetID
 	}
 
 	if cs.ID > 0 {
 		return cs.ID
 	}
 
-	return defaultClientSetID
+	return DefaultClientSetID
 }
 
 func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
@@ -77,11 +77,11 @@ func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
 func (e *Engine) GetNetLinkID(ip net.IP) int {
 	nl, err := e.GetNetLink(ip)
 	if err != nil {
-		return defaultNetLinkID
+		return DefaultNetLinkID
 	}
 
 	if nl.ID <= 0 {
-		return defaultNetLinkID
+		return DefaultNetLinkID
 	}
 
 	return nl.ID
@@ -108,11 +108,11 @@ func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 func (e *Engine) GetDomainPoolID(domain string) int {
 	dm, err := e.GetDomain(domain)
 	if err != nil {
-		return defaultDomainPoolID
+		return DefaultDomainPoolID
 	}
 
 	if dm.DmPoolID <= 0 {
-		return defaultDomainPoolID
+		return DefaultDomainPoolID
 	}
 
 	return dm.DmPoolID

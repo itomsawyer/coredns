@@ -33,6 +33,7 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		cip         net.IP
 		clientSetID int
 		ok          bool
+		replyMsg    *dns.Msg
 	)
 
 	if len(r.Question) == 0 {
@@ -40,10 +41,6 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 	}
 
 	q := r.Question[0]
-	if q.Qtype != dns.TypeA {
-		return 0, nil
-	}
-
 	state := request.Request{W: w, Req: r}
 
 	value := ctx.Value("vane_engine")
@@ -70,18 +67,36 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 	dmPoolID := e.GetDomainPoolID(q.Name)
 	fmt.Println("get domain pool id", dmPoolID)
 
+try_again:
+
 	view, err := e.GetView(clientSetID, dmPoolID)
 	if err != nil {
+		if dmPoolID != engine.DefaultDomainPoolID {
+			dmPoolID = engine.DefaultDomainPoolID
+			goto try_again
+		}
+
 		return dns.RcodeServerFailure, errUnreachable
 	}
 	fmt.Printf("get view %+v \n", view)
 
 	if view.Upstream == nil {
+		if dmPoolID != engine.DefaultDomainPoolID {
+			dmPoolID = engine.DefaultDomainPoolID
+			goto try_again
+		}
+
 		return dns.RcodeServerFailure, errUnreachable
 	}
 
 	policy := view.Upstream.GetPolicy()
 	if policy == nil {
+
+		if dmPoolID != engine.DefaultDomainPoolID {
+			dmPoolID = engine.DefaultDomainPoolID
+			goto try_again
+		}
+
 		return dns.RcodeServerFailure, errUnreachable
 	}
 
@@ -91,13 +106,29 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		fmt.Println("begin select upstream hosts")
 		uphosts := policy.Select()
 		if len(uphosts) == 0 {
-			//TODO goto try_again
-			break
+			// There no upstream host can be found , try again the whole precedure with domainPoolID equals to
+			// default domainPoolID which is 1. Or the domainPoolID is already the default, Lookup failed the
+			// WARNING MUST be sent
+
+			if dmPoolID != engine.DefaultDomainPoolID {
+				dmPoolID = engine.DefaultDomainPoolID
+				goto try_again
+			}
+
+			return dns.RcodeServerFailure, errUnreachable
 		}
 
 		fmt.Println("found upstream host", uphosts)
 
 		replys := DNSExWithTimeout(uphosts, state, 1*time.Second)
+
+		if q.Qtype != dns.TypeA {
+			if len(replys) > 0 {
+				w.WriteMsg(replys[0])
+				return 0, nil
+			}
+			continue
+		}
 
 		better := make([]dns.RR, 0, 1)
 		for _, reply := range replys {
@@ -107,14 +138,19 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 					netLinkID := e.GetNetLinkID(a.A)
 					routes := e.GetRoute(view.RouteSetID, dmPoolID, netLinkID)
 					if len(routes) > 0 {
+						if replyMsg == nil {
+							replyMsg = reply
+						}
 						better = append(better, rr)
 					}
 				}
 			}
 		}
 
-		if len(better) == 0 {
-
+		if len(better) > 0 {
+			replyMsg.Answer = better
+			w.WriteMsg(replyMsg)
+			return 0, nil
 		}
 	}
 
