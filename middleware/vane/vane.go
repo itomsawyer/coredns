@@ -18,6 +18,7 @@ import (
 
 var (
 	errUnreachable = errors.New("unreachable backend")
+	errFormatError = errros.New("format error")
 )
 
 type Vane struct {
@@ -37,24 +38,27 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 	)
 
 	if len(r.Question) == 0 {
-		return 0, nil
+		return dns.RcodeFormatError, errFormatError
 	}
 
 	q := r.Question[0]
 	state := request.Request{W: w, Req: r}
 
+	//XXX MayBe check vane_engine is start at first startup
 	value := ctx.Value("vane_engine")
 	e, ok := value.(*engine.Engine)
 	if !ok || e == nil {
 		return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
 	}
 
+	// Try get clientset_id from previous vane_engine middleware which has done this job.
+	// In case vane_engine doesn't do its duty, try here then
 	value = ctx.Value("clientset_id")
 	clientSetID, ok = value.(int)
 	if !ok {
 		cip = state.GetRemoteAddr()
 		if cip == nil {
-			clientSetID = 1
+			clientSetID = engine.DefaultClientSetID
 		} else {
 			clientSetID = e.GetClientSetID(cip)
 		}
@@ -64,6 +68,7 @@ func (v Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (i
 		fmt.Println("fetch clientset_id from ctx:", clientSetID)
 	}
 
+	// Get domainpool_id , if not found e.GetDomainPoolID return engine.DefaultDomainPoolID
 	dmPoolID := e.GetDomainPoolID(q.Name)
 	fmt.Println("get domain pool id", dmPoolID)
 
@@ -78,6 +83,7 @@ try_again:
 
 		return dns.RcodeServerFailure, errUnreachable
 	}
+
 	fmt.Printf("get view %+v \n", view)
 
 	if view.Upstream == nil {
@@ -93,6 +99,7 @@ try_again:
 		fmt.Println("host in upstream", e)
 	}
 
+	//Policy is a method class to choose upstreamhost (ldns) from upstream (policy)
 	policy := view.Upstream.GetPolicy()
 	if policy == nil {
 
@@ -108,6 +115,7 @@ try_again:
 
 	for {
 		fmt.Println("begin select upstream hosts")
+		// for each time policy choose the next prior upstreamhosts group
 		uphosts := policy.Select()
 		if len(uphosts) == 0 {
 			// There no upstream host can be found , try again the whole precedure with domainPoolID equals to
@@ -126,6 +134,8 @@ try_again:
 			fmt.Println("found upstream host", uh)
 		}
 
+		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
+		// TODO make the timeout configurable
 		replys := DNSExWithTimeout(uphosts, state, 1*time.Second)
 		for _, r := range replys {
 			fmt.Println("get replys", r)
@@ -136,6 +146,7 @@ try_again:
 			continue
 		}
 
+		// No need to filter record with type is not, Get a proper one to return
 		if q.Qtype != dns.TypeA {
 			if len(replys) > 0 {
 				w.WriteMsg(replys[0])
@@ -144,6 +155,7 @@ try_again:
 			continue
 		}
 
+		// better is the result set of all A that pass the filter with Route
 		better := addrSet{}
 		for _, reply := range replys {
 			rrset := reply.Answer
@@ -151,6 +163,7 @@ try_again:
 				if a, ok := rr.(*dns.A); ok {
 					netLinkID := e.GetNetLinkID(a.A)
 					routes := e.GetRoute(view.RouteSetID, dmPoolID, netLinkID)
+					// If has route, we consider the result to be valid
 					if len(routes) > 0 {
 						if replyMsg == nil {
 							replyMsg = reply
@@ -162,13 +175,17 @@ try_again:
 		}
 
 		if len(better) > 0 {
+			// we got answer, return
 			replyMsg.Answer = better.RRSet()
 			fmt.Println("write anwser:", replyMsg)
 			w.WriteMsg(replyMsg)
 			return 0, nil
 		}
+
+		// No luck for this time, try to ask other upstreamhosts
 	}
 
+	// TODO LOG WARN: we tried our best but still got nothing
 	return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
 }
 
@@ -190,16 +207,25 @@ func DNSExWithTimeout(uphosts []*proxy.UpstreamHost, state request.Request, time
 	out := make(chan *dns.Msg)
 	errChan := make(chan error)
 	wg := new(sync.WaitGroup)
+	done := make(chan struct{})
 
 	for i := 0; i < len(uphosts); i++ {
 		wg.Add(1)
 		go func(uh *proxy.UpstreamHost) {
+			fmt.Println("send query to ", uh)
 			reply, backendErr := uh.DoExchange(state)
+			fmt.Println("exchange get reply with error:", backendErr, "msg:", reply)
 
 			if backendErr == nil {
-				out <- reply
+				select {
+				case out <- reply:
+				case <-done:
+				}
 			} else {
-				errChan <- backendErr
+				select {
+				case errChan <- backendErr:
+				case <-done:
+				}
 				uh.Fail()
 			}
 
@@ -208,14 +234,18 @@ func DNSExWithTimeout(uphosts []*proxy.UpstreamHost, state request.Request, time
 	}
 
 	defer func() {
+		close(done)
 		go func() {
+			fmt.Println("clean up DNSExWithTimeout: waiting")
 			wg.Wait()
 			close(out)
 			close(errChan)
+			fmt.Println("clean up DNSExWithTimeout: done")
 		}()
 	}()
 
 	if timeout == 0 {
+		// TODO make it configurable
 		timeout = 3 * time.Second
 	}
 
