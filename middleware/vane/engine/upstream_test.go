@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/miekg/coredns/middleware/proxy"
+	"github.com/coredns/coredns/middleware/proxy"
 )
 
 func TestAddUpstream(t *testing.T) {

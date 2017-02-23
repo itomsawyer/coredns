@@ -1,7 +1,7 @@
 package dnsserver
 
 import (
-	"github.com/miekg/coredns/middleware"
+	"github.com/coredns/coredns/middleware"
 
 	"github.com/mholt/caddy"
 )
@@ -22,7 +22,7 @@ type Config struct {
 	Root string
 
 	// Server is the server that handles this config
-	Server  *Server
+	Server *Server
 
 	// Middleware stack.
 	Middleware []middleware.Middleware

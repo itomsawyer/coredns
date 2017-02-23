@@ -3,8 +3,8 @@ package engine
 import (
 	"fmt"
 
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/middleware/vane/models"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/vane/models"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"

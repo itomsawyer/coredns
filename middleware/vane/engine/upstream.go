@@ -3,18 +3,20 @@ package engine
 import (
 	"sort"
 
-	"github.com/miekg/coredns/middleware/proxy"
+	"github.com/coredns/coredns/middleware/proxy"
 )
 
 type Upstreamer interface {
 	Select() []*proxy.UpstreamHost
 	GetPolicy() Policy
+	Exchanger() Exchanger
 }
 
 type Upstream struct {
 	Name   string
 	Hosts  HostPool
 	Policy PolicyBuilder
+	Ex     Exchanger
 }
 
 func NewUpstream(name string) *Upstream {
@@ -22,6 +24,7 @@ func NewUpstream(name string) *Upstream {
 		Name:   name,
 		Hosts:  HostPool{},
 		Policy: NewSimplePolicy,
+		Ex:     newDNSEx(),
 	}
 }
 
@@ -36,6 +39,10 @@ func (p *Upstream) AddHost(uh *proxy.UpstreamHost, priority int) {
 
 func (p *Upstream) SetPolicy(policy PolicyBuilder) {
 	p.Policy = policy
+}
+
+func (p *Upstream) Exchanger() Exchanger {
+	return p.Ex
 }
 
 type HostPool []HostPoolEle

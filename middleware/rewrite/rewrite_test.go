@@ -3,9 +3,9 @@ package rewrite
 import (
 	"testing"
 
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/middleware/pkg/dnsrecorder"
-	"github.com/miekg/coredns/middleware/test"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
+	"github.com/coredns/coredns/middleware/test"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
@@ -20,9 +20,9 @@ func TestRewrite(t *testing.T) {
 	rw := Rewrite{
 		Next: middleware.HandlerFunc(msgPrinter),
 		Rules: []Rule{
-			NewSimpleRule("from.nl.", "to.nl."),
-			NewSimpleRule("CH", "IN"),
-			NewSimpleRule("ANY", "HINFO"),
+			Fields["name"].New("from.nl.", "to.nl."),
+			Fields["class"].New("CH", "IN"),
+			Fields["type"].New("ANY", "HINFO"),
 		},
 		noRevert: true,
 	}

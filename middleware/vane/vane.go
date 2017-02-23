@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/middleware/proxy"
-	"github.com/miekg/coredns/middleware/vane/engine"
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/proxy"
+	"github.com/coredns/coredns/middleware/vane/engine"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
@@ -18,7 +19,7 @@ import (
 
 var (
 	errUnreachable = errors.New("unreachable backend")
-	errFormatError = errros.New("format error")
+	errFormatError = errors.New("format error")
 )
 
 type Vane struct {
@@ -136,7 +137,7 @@ try_again:
 
 		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
 		// TODO make the timeout configurable
-		replys := DNSExWithTimeout(uphosts, state, 1*time.Second)
+		replys := DNSExWithTimeout(ctx, view.Upstream, uphosts, state, 1*time.Second)
 		for _, r := range replys {
 			fmt.Println("get replys", r)
 		}
@@ -189,11 +190,20 @@ try_again:
 	return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
 }
 
-func DNSExWithTimeout(uphosts []*proxy.UpstreamHost, state request.Request, timeout time.Duration) (replys []*dns.Msg) {
+func DNSExWithTimeout(ctx context.Context, upstream *engine.Upstream, uphosts []*proxy.UpstreamHost, state request.Request, timeout time.Duration) (replys []*dns.Msg) {
+	ex := upstream.Exchanger()
+	if ex == nil {
+		//TODO LOG
+		return nil
+	}
+
 	if len(uphosts) == 1 {
 		uh := uphosts[0]
 
-		reply, backendErr := uh.DoExchange(state)
+		atomic.AddInt64(&uh.Conns, 1)
+		reply, backendErr := ex.Exchange(ctx, uh.Name, state)
+		atomic.AddInt64(&uh.Conns, -1)
+
 		if backendErr != nil {
 			//TODO LOG
 			fmt.Println(backendErr)
@@ -213,7 +223,9 @@ func DNSExWithTimeout(uphosts []*proxy.UpstreamHost, state request.Request, time
 		wg.Add(1)
 		go func(uh *proxy.UpstreamHost) {
 			fmt.Println("send query to ", uh)
-			reply, backendErr := uh.DoExchange(state)
+			atomic.AddInt64(&uh.Conns, 1)
+			reply, backendErr := ex.Exchange(ctx, uh.Name, state)
+			atomic.AddInt64(&uh.Conns, -1)
 			fmt.Println("exchange get reply with error:", backendErr, "msg:", reply)
 
 			if backendErr == nil {

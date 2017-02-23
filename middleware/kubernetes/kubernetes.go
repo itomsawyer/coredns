@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/middleware/etcd/msg"
-	"github.com/miekg/coredns/middleware/pkg/dnsutil"
-	dnsstrings "github.com/miekg/coredns/middleware/pkg/strings"
-	"github.com/miekg/coredns/middleware/proxy"
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/etcd/msg"
+	"github.com/coredns/coredns/middleware/pkg/dnsutil"
+	dnsstrings "github.com/coredns/coredns/middleware/pkg/strings"
+	"github.com/coredns/coredns/middleware/proxy"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 	"k8s.io/client-go/1.5/kubernetes"
@@ -130,7 +130,7 @@ func (k *Kubernetes) Reverse(state request.Request, exact bool, opt middleware.O
 	return records, nil, nil
 }
 
-func (k *Kubernetes) IsRequestInReverseRange(state request.Request) bool {
+func (k *Kubernetes) isRequestInReverseRange(state request.Request) bool {
 	ip := dnsutil.ExtractAddressFromReverse(state.Name())
 	for _, c := range k.ReverseCidrs {
 		if c.Contains(net.ParseIP(ip)) {
@@ -508,7 +508,7 @@ func (k *Kubernetes) getServiceRecordForIP(ip, name string) []msg.Service {
 		return nil
 	}
 	for _, service := range svcList {
-		if !dnsstrings.StringInSlice(service.Namespace, k.Namespaces) {
+		if (len(k.Namespaces) > 0) && !dnsstrings.StringInSlice(service.Namespace, k.Namespaces) {
 			continue
 		}
 		if service.Spec.ClusterIP == ip {
@@ -522,7 +522,7 @@ func (k *Kubernetes) getServiceRecordForIP(ip, name string) []msg.Service {
 		return nil
 	}
 	for _, ep := range epList.Items {
-		if !dnsstrings.StringInSlice(ep.ObjectMeta.Namespace, k.Namespaces) {
+		if (len(k.Namespaces) > 0) && !dnsstrings.StringInSlice(ep.ObjectMeta.Namespace, k.Namespaces) {
 			continue
 		}
 		for _, eps := range ep.Subsets {

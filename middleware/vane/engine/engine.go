@@ -3,12 +3,11 @@ package engine
 import (
 	"errors"
 	"net"
-	"time"
 
-	"github.com/miekg/coredns/middleware/pkg/dmtree"
-	"github.com/miekg/coredns/middleware/pkg/dnsutil"
-	"github.com/miekg/coredns/middleware/pkg/nettree"
-	"github.com/miekg/coredns/middleware/proxy"
+	"github.com/coredns/coredns/middleware/pkg/dmtree"
+	"github.com/coredns/coredns/middleware/pkg/dnsutil"
+	"github.com/coredns/coredns/middleware/pkg/nettree"
+	"github.com/coredns/coredns/middleware/proxy"
 )
 
 var (
@@ -247,7 +246,7 @@ func (e *Engine) AddDomain(id int, domain string, dmpool_id int, dmpool_name str
 	return e.Domain.Insert(d.Domain, d)
 }
 
-func (e *Engine) AddUpstreamHost(host string, timeout time.Duration, unhealthy bool) (*proxy.UpstreamHost, error) {
+func (e *Engine) AddUpstreamHost(host string, unhealthy bool) (*proxy.UpstreamHost, error) {
 	h, err := dnsutil.ParseHostPort(host, "53")
 	if err != nil {
 		return nil, err
@@ -258,12 +257,11 @@ func (e *Engine) AddUpstreamHost(host string, timeout time.Duration, unhealthy b
 	}
 
 	if uh, ok := e.UpstreamHosts[h]; ok {
-		uh.SetTimeout(timeout)
 		uh.Unhealthy = unhealthy
 		return uh, nil
 	}
 
-	uh := proxy.NewUpstreamHost(h, timeout)
+	uh := proxy.NewUpstreamHost(h)
 	if uh == nil {
 		return nil, errors.New("upsteam host (ldns) address format error")
 	}

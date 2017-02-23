@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/miekg/coredns/middleware/proxy"
+	"github.com/coredns/coredns/middleware/proxy"
 )
 
 func TestSimplePolicy(t *testing.T) {

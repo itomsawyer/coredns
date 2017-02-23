@@ -1,21 +1,19 @@
 package proxy
 
 import (
-	"time"
+	"context"
 
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/request"
+
 	"github.com/miekg/dns"
 )
 
 // Exchanger is an interface that specifies a type implementing a DNS resolver that
 // can use whatever transport it likes.
 type Exchanger interface {
-	Exchange(request.Request) (*dns.Msg, error)
-	SetUpstream(Upstream) error // (Re)set the upstream
-	SetTimeout(timeout time.Duration)
-	OnStartup() error
-	OnShutdown() error
-	Protocol() protocol
-}
+	Exchange(ctx context.Context, addr string, state request.Request) (*dns.Msg, error)
+	Protocol() string
 
-type protocol string
+	OnStartup(*Proxy) error
+	OnShutdown(*Proxy) error
+}

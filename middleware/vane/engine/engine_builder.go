@@ -2,10 +2,9 @@ package engine
 
 import (
 	"fmt"
-	"time"
 
-	"github.com/miekg/coredns/middleware/pkg/dnsutil"
-	"github.com/miekg/coredns/middleware/vane/models"
+	"github.com/coredns/coredns/middleware/pkg/dnsutil"
+	"github.com/coredns/coredns/middleware/vane/models"
 
 	"github.com/astaxie/beego/orm"
 )
@@ -196,7 +195,7 @@ func (b *EngineBuilder) BuildUpstream(e *Engine) error {
 		fmt.Println(upstream)
 
 		//TODO configurable timeout and healthy
-		uh, err := e.AddUpstreamHost(v.Addr, 3*time.Second, false)
+		uh, err := e.AddUpstreamHost(v.Addr, false)
 		if err != nil {
 			return err
 		}

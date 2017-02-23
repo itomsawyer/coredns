@@ -1,7 +1,7 @@
 package engine
 
 import (
-	"github.com/miekg/coredns/middleware/proxy"
+	"github.com/coredns/coredns/middleware/proxy"
 )
 
 type Policy interface {

@@ -5,9 +5,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/miekg/coredns/middleware"
-	vane "github.com/miekg/coredns/middleware/vane/engine"
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/middleware"
+	vane "github.com/coredns/coredns/middleware/vane/engine"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 	"github.com/prometheus/client_golang/prometheus"
