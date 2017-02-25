@@ -2,7 +2,6 @@ package vane
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"sync"
 	"sync/atomic"
@@ -21,6 +20,9 @@ import (
 var (
 	errUnreachable = errors.New("unreachable backend")
 	errFormatError = errors.New("format error")
+
+	defaultMaxAttampts = 10
+	defaultTimeout     = 3 * time.Second
 )
 
 type Vane struct {
@@ -37,7 +39,6 @@ func (v *Vane) InitLogger() error {
 		return err
 	}
 
-	fmt.Println("bee logger", l)
 	v.Logger = l
 	return nil
 }
@@ -45,13 +46,11 @@ func (v *Vane) InitLogger() error {
 func (v *Vane) Name() string { return "vane" }
 
 func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	v.Logger.Debug("enter vane")
-	defer v.Logger.Debug("leave vane")
 	var (
-		cip         net.IP
-		clientSetID int
-		ok          bool
-		replyMsg    *dns.Msg
+		cip            net.IP
+		i, clientSetID int
+		ok             bool
+		replyMsg       *dns.Msg
 	)
 
 	if len(r.Question) == 0 {
@@ -61,7 +60,7 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	q := r.Question[0]
 	state := request.Request{W: w, Req: r}
 
-	//XXX MayBe check vane_engine is start at first startup
+	//TODO MayBe check vane_engine is start at first startup
 	value := ctx.Value("vane_engine")
 	e, ok := value.(*engine.Engine)
 	if !ok || e == nil {
@@ -74,20 +73,22 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	clientSetID, ok = value.(int)
 	if !ok {
 		cip = state.GetRemoteAddr()
+		v.Logger.Debug("get remote client addr %v", cip)
 		if cip == nil {
 			clientSetID = engine.DefaultClientSetID
 		} else {
 			clientSetID = e.GetClientSetID(cip)
 		}
 
-		v.Logger.Debug("self decoede clientset_id", clientSetID)
+		v.Logger.Debug("fetch clientset_id from request: %v", clientSetID)
 	} else {
-		v.Logger.Debug("fetch clientset_id from ctx:", clientSetID)
+		v.Logger.Debug("fetch clientset_id from vane_engine: %v", clientSetID)
 	}
 
 	// Get domainpool_id , if not found e.GetDomainPoolID return engine.DefaultDomainPoolID
 	dmPoolID := e.GetDomainPoolID(q.Name)
-	v.Logger.Debug("get domain pool id", dmPoolID)
+	v.Logger.Debug("query domain %s", q.Name)
+	v.Logger.Debug("get domain pool id: %d", dmPoolID)
 
 try_again:
 
@@ -102,7 +103,7 @@ try_again:
 		return dns.RcodeServerFailure, errUnreachable
 	}
 
-	v.Logger.Debug("get view", view)
+	v.Logger.Debug("get view %v", view)
 
 	if view.Upstream == nil {
 		if dmPoolID != engine.DefaultDomainPoolID {
@@ -112,10 +113,6 @@ try_again:
 		}
 
 		return dns.RcodeServerFailure, errUnreachable
-	}
-
-	for _, e := range view.Upstream.Hosts {
-		v.Logger.Debug("host in upstream", e)
 	}
 
 	//Policy is a method class to choose upstreamhost (ldns) from upstream (policy)
@@ -131,10 +128,8 @@ try_again:
 		return dns.RcodeServerFailure, errUnreachable
 	}
 
-	v.Logger.Debug("get policy success")
-
-	for {
-		v.Logger.Debug("begin select upstream hosts")
+	for i = 0; i < defaultMaxAttampts; i++ {
+		v.Logger.Debug("try select upstream hosts")
 		// for each time policy choose the next prior upstreamhosts group
 		uphosts := policy.Select()
 		if len(uphosts) == 0 {
@@ -151,19 +146,22 @@ try_again:
 			return dns.RcodeServerFailure, errUnreachable
 		}
 
-		for _, uh := range uphosts {
-			v.Logger.Debug("upstream host found", uh)
+		if v.Debug {
+			for _, uh := range uphosts {
+				v.Logger.Debug("upstream host found %v", uh)
+			}
 		}
 
 		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
-		v.Logger.Debug("upstream timeout:", v.UpstreamTimeout)
+		v.Logger.Debug("set upstream timeout: %s", v.UpstreamTimeout)
 		replys := DNSExWithTimeout(ctx, view.Upstream, uphosts, state, v.UpstreamTimeout)
-		for _, r := range replys {
-			v.Logger.Debug("get replys", r)
+		if v.Debug {
+			for _, r := range replys {
+				v.Logger.Debug("get reply from upstream host :\n%v", r)
+			}
 		}
 
 		if len(replys) == 0 {
-			v.Logger.Debug("get no replys")
 			continue
 		}
 
@@ -189,6 +187,7 @@ try_again:
 						if replyMsg == nil {
 							replyMsg = reply
 						}
+						v.Logger.Debug("ip addr has been accepted %s", a.A)
 						better.Add(a)
 					}
 				}
@@ -198,7 +197,7 @@ try_again:
 		if len(better) > 0 {
 			// we got answer, return
 			replyMsg.Answer = better.RRSet()
-			v.Logger.Debug("write anwser:", replyMsg)
+			v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
 			w.WriteMsg(replyMsg)
 			return 0, nil
 		}
@@ -206,20 +205,25 @@ try_again:
 		// No luck for this time, try to ask other upstreamhosts
 	}
 
+	if i == defaultMaxAttampts {
+		v.Logger.Error("MaxAttampts of upstream query reached, configuration or policy is badly configured")
+	}
+
 	if dmPoolID != engine.DefaultDomainPoolID {
 		dmPoolID = engine.DefaultDomainPoolID
-		v.Logger.Debug("fallback to default domain pool")
+		v.Logger.Warn("fallback to default domain pool for clientset: %d dmpool: %d", clientSetID, dmPoolID)
 		goto try_again
 	}
 
-	// TODO LOG WARN: we tried our best but still got nothing
+	//LOG WARN: we tried our best but still got nothing
+	v.Logger.Error("vane cannot resolve for clientset: %d dmpool: %d", clientSetID, dmPoolID)
+
 	return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
 }
 
 func DNSExWithTimeout(ctx context.Context, upstream *engine.Upstream, uphosts []*proxy.UpstreamHost, state request.Request, timeout time.Duration) (replys []*dns.Msg) {
 	ex := upstream.Exchanger()
 	if ex == nil {
-		//TODO LOG
 		return nil
 	}
 
@@ -277,8 +281,7 @@ func DNSExWithTimeout(ctx context.Context, upstream *engine.Upstream, uphosts []
 	}()
 
 	if timeout == 0 {
-		// TODO make it configurable
-		timeout = 3 * time.Second
+		timeout = defaultTimeout
 	}
 
 	t := time.NewTimer(timeout)
@@ -288,7 +291,6 @@ func DNSExWithTimeout(ctx context.Context, upstream *engine.Upstream, uphosts []
 		case reply := <-out:
 			replys = append(replys, reply)
 		case <-errChan:
-			//TODO LOG
 		case <-t.C:
 			return
 		}

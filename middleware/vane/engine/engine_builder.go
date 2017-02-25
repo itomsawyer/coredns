@@ -4,11 +4,13 @@ import (
 	"github.com/coredns/coredns/middleware/pkg/dnsutil"
 	"github.com/coredns/coredns/middleware/vane/models"
 
+	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/orm"
 )
 
 type EngineBuilder struct {
 	DBName          string
+	Logger          *logs.BeeLogger
 	ClientSetView   []models.ClientSetView
 	ClientSetWLView []models.ClientSetWLView
 	NetLinkView     []models.NetLinkView
@@ -130,21 +132,29 @@ func (b *EngineBuilder) BuildClientSet(e *Engine) error {
 	for _, v := range b.ClientSetView {
 		ipnet, err := dnsutil.ParseIPNet(v.Ipnet, int(v.Mask))
 		if err != nil {
-			//TODO LOG
+			b.Logger.Error("ParseIPNet for clientset %v failed, %s", v, err)
 			return err
 		}
 
-		e.AddClient(ipnet, v.ClientSetId, v.ClientSetName)
+		err = e.AddClient(ipnet, v.ClientSetId, v.ClientSetName)
+		if err != nil {
+			b.Logger.Error("AddClientSet %v failed, %s", v, err)
+			return err
+		}
 	}
 
 	for _, v := range b.ClientSetWLView {
 		ipnet, err := dnsutil.ParseIPNet(v.Ipnet, int(v.Mask))
 		if err != nil {
-			//TODO LOG
+			b.Logger.Error("ParseIPNet for clientsetwl %v failed, %s", v, err)
 			return err
 		}
 
-		e.AddClient(ipnet, v.ClientSetId, v.ClientSetName)
+		err = e.AddClient(ipnet, v.ClientSetId, v.ClientSetName)
+		if err != nil {
+			b.Logger.Error("AddClientSetWL %v failed, %s", v, err)
+			return err
+		}
 	}
 
 	return nil
@@ -154,21 +164,29 @@ func (b *EngineBuilder) BuildNetLink(e *Engine) error {
 	for _, v := range b.NetLinkView {
 		ipnet, err := dnsutil.ParseIPNet(v.Ipnet, int(v.Mask))
 		if err != nil {
-			//TODO LOG
+			b.Logger.Error("ParseIPNet for netlink %v failed, %s", v, err)
 			return err
 		}
 
-		e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region)
+		err = e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region)
+		if err != nil {
+			b.Logger.Error("AddNetLink %v failed, %s", v, err)
+			return err
+		}
 	}
 
 	for _, v := range b.NetLinkWLView {
 		ipnet, err := dnsutil.ParseIPNet(v.Ipnet, int(v.Mask))
 		if err != nil {
-			//TODO LOG
+			b.Logger.Error("ParseIPNet for netlink %v failed, %s", v, err)
 			return err
 		}
 
-		e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region)
+		err = e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region)
+		if err != nil {
+			b.Logger.Error("AddNetLinkWL %v failed, %s", v, err)
+			return err
+		}
 	}
 
 	return nil
@@ -178,7 +196,7 @@ func (b *EngineBuilder) BuildDomainView(e *Engine) error {
 	for _, v := range b.DomainView {
 		err := e.AddDomain(v.DomainId, v.Domain, v.DomainPoolId, v.Domain)
 		if err != nil {
-			//TODO LOG
+			b.Logger.Error("AddDomain %v failed, %s", v, err)
 			return err
 		}
 	}
@@ -192,6 +210,7 @@ func (b *EngineBuilder) BuildUpstream(e *Engine) error {
 
 		uh, err := e.AddUpstreamHost(v.Addr, false)
 		if err != nil {
+			b.Logger.Error("AddUpstreamHost %v failed, %s", v, err)
 			return err
 		}
 
@@ -205,7 +224,7 @@ func (b *EngineBuilder) BuildSrcView(e *Engine) error {
 	for _, v := range b.SrcView {
 		up, err := e.GetUpstreamByID(v.PolicyId)
 		if err != nil {
-			//TODO LOG
+			b.Logger.Warn("AddSrcView %v with no policy found", v)
 			continue
 		}
 
@@ -245,7 +264,7 @@ func (b *EngineBuilder) BuildRoute(e *Engine) error {
 	for _, v := range b.RouteView {
 		ot, err := NewOutLink(v.OutlinkName, v.OutlinkAddr)
 		if err != nil {
-			//TODO LOG
+			b.Logger.Error("NewOutLink %v failed %s", v, err)
 			return err
 		}
 

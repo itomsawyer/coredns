@@ -2,7 +2,6 @@ package engine
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
@@ -32,8 +31,17 @@ func setup(c *caddy.Controller) error {
 	})
 
 	c.OnStartup(func() (err error) {
+		err = vane.InitLogger()
+		return err
+	})
+
+	c.OnStartup(func() (err error) {
 		err = vane.Reload()
-		fmt.Println("engine start")
+		if err == nil {
+			vane.Logger.Info("vane engine start success")
+		} else {
+			vane.Logger.Info("vane engine start fail")
+		}
 		return err
 	})
 
@@ -66,6 +74,14 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 					}
 
 					vane.DBHost = args[0]
+
+				case "log":
+					lc, err := ParseLogConfig(c)
+					if err != nil {
+						return nil, err
+					}
+
+					vane.LogConfigs = append(vane.LogConfigs, lc)
 				default:
 					return nil, c.ArgErr()
 				}
