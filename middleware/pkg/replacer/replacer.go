@@ -36,6 +36,7 @@ func New(r *dns.Msg, rr *dnsrecorder.Recorder, emptyValue string) Replacer {
 	rep := replacer{
 		replacements: map[string]string{
 			"{type}":  req.Type(),
+			"{ecs}":   req.GetRemoteAddr().String(),
 			"{name}":  req.Name(),
 			"{class}": req.Class(),
 			"{proto}": req.Proto(),
