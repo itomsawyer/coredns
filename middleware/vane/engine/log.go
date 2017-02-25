@@ -32,6 +32,18 @@ func NewLogConfig() *LogConfig {
 	}
 }
 
+func CreateLogger(logConfigs []*LogConfig) (*logs.BeeLogger, error) {
+	beeLogger := logs.NewLogger()
+
+	for _, lc := range logConfigs {
+		if err := lc.ApplyTo(beeLogger); err != nil {
+			return nil, err
+		}
+	}
+
+	return beeLogger, nil
+}
+
 func (lc *LogConfig) ApplyTo(l *logs.BeeLogger) error {
 	config, err := lc.Marshal()
 	if err != nil {

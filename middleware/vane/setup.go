@@ -31,7 +31,7 @@ func setup(c *caddy.Controller) error {
 	}
 
 	c.OnStartup(func() error {
-		return v.CreateLogger()
+		return v.InitLogger()
 	})
 
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
