@@ -31,8 +31,8 @@ func setup(c *caddy.Controller) error {
 		return vane.RegisterDB()
 	})
 
-	c.OnStartup(func() error {
-		err := vane.Reload()
+	c.OnStartup(func() (err error) {
+		err = vane.Reload()
 		fmt.Println("engine start")
 		return err
 	})

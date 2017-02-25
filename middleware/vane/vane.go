@@ -13,6 +13,7 @@ import (
 	"github.com/coredns/coredns/middleware/vane/engine"
 	"github.com/coredns/coredns/request"
 
+	"github.com/astaxie/beego/logs"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
@@ -24,7 +25,24 @@ var (
 
 type Vane struct {
 	UpstreamTimeout time.Duration
+	Debug           bool
+	Logger          *logs.BeeLogger
+	LogConfigs      []*engine.LogConfig
 	Next            middleware.Handler
+}
+
+func (v Vane) CreateLogger() error {
+	beeLogger := logs.NewLogger()
+
+	for _, lc := range v.LogConfigs {
+		err := lc.ApplyTo(beeLogger)
+		if err != nil {
+			return err
+		}
+	}
+
+	v.Logger = beeLogger
+	return nil
 }
 
 func (v Vane) Name() string { return "vane" }
@@ -141,7 +159,7 @@ try_again:
 		}
 
 		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
-		// TODO make the timeout configurable
+		fmt.Println("upstream timeout:", v.UpstreamTimeout)
 		replys := DNSExWithTimeout(ctx, view.Upstream, uphosts, state, v.UpstreamTimeout)
 		for _, r := range replys {
 			fmt.Println("get replys", r)
