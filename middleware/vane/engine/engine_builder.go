@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"fmt"
-
 	"github.com/coredns/coredns/middleware/pkg/dnsutil"
 	"github.com/coredns/coredns/middleware/vane/models"
 
@@ -192,19 +190,12 @@ func (b *EngineBuilder) BuildUpstream(e *Engine) error {
 	for _, v := range b.PolicyView {
 		upstream := e.AddUpstream(v.PolicyId, v.PolicyName)
 
-		fmt.Println(upstream)
-
-		//TODO configurable timeout and healthy
 		uh, err := e.AddUpstreamHost(v.Addr, false)
 		if err != nil {
 			return err
 		}
 
 		upstream.AddHost(uh, v.Priority)
-
-		for _, e := range upstream.Hosts {
-			fmt.Println("host in upstream", e)
-		}
 	}
 
 	return nil

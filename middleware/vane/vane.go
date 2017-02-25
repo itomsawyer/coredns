@@ -23,7 +23,8 @@ var (
 )
 
 type Vane struct {
-	Next middleware.Handler
+	UpstreamTimeout time.Duration
+	Next            middleware.Handler
 }
 
 func (v Vane) Name() string { return "vane" }
@@ -79,6 +80,7 @@ try_again:
 	if err != nil {
 		if dmPoolID != engine.DefaultDomainPoolID {
 			dmPoolID = engine.DefaultDomainPoolID
+			fmt.Println("fallback to default domain pool")
 			goto try_again
 		}
 
@@ -90,6 +92,7 @@ try_again:
 	if view.Upstream == nil {
 		if dmPoolID != engine.DefaultDomainPoolID {
 			dmPoolID = engine.DefaultDomainPoolID
+			fmt.Println("fallback to default domain pool")
 			goto try_again
 		}
 
@@ -106,6 +109,7 @@ try_again:
 
 		if dmPoolID != engine.DefaultDomainPoolID {
 			dmPoolID = engine.DefaultDomainPoolID
+			fmt.Println("fallback to default domain pool")
 			goto try_again
 		}
 
@@ -125,6 +129,7 @@ try_again:
 
 			if dmPoolID != engine.DefaultDomainPoolID {
 				dmPoolID = engine.DefaultDomainPoolID
+				fmt.Println("fallback to default domain pool")
 				goto try_again
 			}
 
@@ -137,7 +142,7 @@ try_again:
 
 		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
 		// TODO make the timeout configurable
-		replys := DNSExWithTimeout(ctx, view.Upstream, uphosts, state, 1*time.Second)
+		replys := DNSExWithTimeout(ctx, view.Upstream, uphosts, state, v.UpstreamTimeout)
 		for _, r := range replys {
 			fmt.Println("get replys", r)
 		}
@@ -184,6 +189,12 @@ try_again:
 		}
 
 		// No luck for this time, try to ask other upstreamhosts
+	}
+
+	if dmPoolID != engine.DefaultDomainPoolID {
+		dmPoolID = engine.DefaultDomainPoolID
+		fmt.Println("fallback to default domain pool")
+		goto try_again
 	}
 
 	// TODO LOG WARN: we tried our best but still got nothing

@@ -2,6 +2,7 @@ package vane
 
 import (
 	"errors"
+	"time"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
@@ -21,6 +22,7 @@ func init() {
 }
 
 func setup(c *caddy.Controller) error {
+	parseVane(c)
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
 		v := new(Vane)
 		v.Next = next
@@ -28,4 +30,38 @@ func setup(c *caddy.Controller) error {
 	})
 
 	return nil
+}
+
+func parseVane(c *caddy.Controller) (vane *Vane, err error) {
+	vane = new(Vane)
+
+	for c.Next() {
+		if c.Val() == "vane" {
+			args := c.RemainingArgs()
+			if len(args) > 0 {
+				return nil, c.ArgErr()
+			}
+
+			for c.NextBlock() {
+				switch c.Val() {
+				case "upstream_timeout":
+					args := c.RemainingArgs()
+					if len(args) != 1 {
+						return nil, c.ArgErr()
+					}
+
+					to, err := time.ParseDuration(args[0])
+					if err != nil {
+						return nil, c.SyntaxErr("time duration")
+					}
+
+					vane.UpstreamTimeout = to
+				default:
+					return nil, c.ArgErr()
+				}
+			}
+		}
+	}
+
+	return vane, nil
 }

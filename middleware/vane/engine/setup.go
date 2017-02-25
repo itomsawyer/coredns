@@ -27,6 +27,16 @@ func setup(c *caddy.Controller) error {
 		return err
 	}
 
+	c.OnFirstStartup(func() error {
+		return vane.RegisterDB()
+	})
+
+	c.OnStartup(func() error {
+		err := vane.Reload()
+		fmt.Println("engine start")
+		return err
+	})
+
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
 		vane.Next = next
 		return vane
@@ -51,11 +61,11 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 				switch c.Val() {
 				case "db":
 					args := c.RemainingArgs()
-					if len(args) == 0 {
+					if len(args) != 1 {
 						return nil, c.ArgErr()
 					}
-					vane.DBHost = args[0]
 
+					vane.DBHost = args[0]
 				default:
 					return nil, c.ArgErr()
 				}
@@ -66,16 +76,6 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 	if vane.DBHost == "" {
 		return nil, ErrNoDBHost
 	}
-
-	c.OnFirstStartup(func() error {
-		return vane.RegisterDB()
-	})
-
-	c.OnStartup(func() error {
-		err := vane.Reload()
-		fmt.Println("engine start")
-		return err
-	})
 
 	return vane, nil
 }

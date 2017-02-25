@@ -27,7 +27,7 @@ type dnsEx struct {
 }
 
 func newDNSEx() *dnsEx {
-	return &dnsEx{group: new(singleflight.Group), Timeout: defaultTimeout * time.Second}
+	return &dnsEx{group: new(singleflight.Group), Timeout: defaultTimeout}
 }
 
 func (d *dnsEx) Protocol() string                { return "dns" }
@@ -75,7 +75,7 @@ func (d *dnsEx) ExchangeConn(m *dns.Msg, co net.Conn) (*dns.Msg, time.Duration, 
 
 	// Name needs to be normalized! Bug in go dns.
 	r, err := d.group.Do(m.Question[0].Name+t+cl, func() (interface{}, error) {
-		return exchange(m, co)
+		return exchange(m, co, d.Timeout)
 	})
 
 	r1 := r.(dns.Msg)
@@ -85,8 +85,12 @@ func (d *dnsEx) ExchangeConn(m *dns.Msg, co net.Conn) (*dns.Msg, time.Duration, 
 
 // exchange does *not* return a pointer to dns.Msg because that leads to buffer reuse when
 // group.Do is used in Exchange.
-func exchange(m *dns.Msg, co net.Conn) (dns.Msg, error) {
+func exchange(m *dns.Msg, co net.Conn, t time.Duration) (dns.Msg, error) {
 	opt := m.IsEdns0()
+
+	if t == 0 {
+		t = defaultTimeout
+	}
 
 	udpsize := uint16(dns.MinMsgSize)
 	// If EDNS0 is used use that for size.
@@ -96,11 +100,11 @@ func exchange(m *dns.Msg, co net.Conn) (dns.Msg, error) {
 
 	dnsco := &dns.Conn{Conn: co, UDPSize: udpsize}
 
-	writeDeadline := time.Now().Add(defaultTimeout)
+	writeDeadline := time.Now().Add(t)
 	dnsco.SetWriteDeadline(writeDeadline)
 	dnsco.WriteMsg(m)
 
-	readDeadline := time.Now().Add(defaultTimeout)
+	readDeadline := time.Now().Add(t)
 	co.SetReadDeadline(readDeadline)
 	r, err := dnsco.ReadMsg()
 
