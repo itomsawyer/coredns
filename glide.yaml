@@ -1,0 +1,59 @@
+package: github.com/coredns/coredns
+import:
+- package: github.com/coreos/etcd
+  version: ~3.1.2
+  subpackages:
+  - client
+- package: github.com/fsnotify/fsnotify
+  version: ~1.4.2
+- package: github.com/golang/protobuf
+  subpackages:
+  - proto
+- package: github.com/hashicorp/go-syslog
+- package: github.com/hashicorp/golang-lru
+- package: github.com/matttproud/golang_protobuf_extensions
+  version: ~1.0.0
+  subpackages:
+  - pbutil
+- package: github.com/mholt/caddy
+  version: ~0.9.5
+  subpackages:
+  - caddyfile
+- package: github.com/miekg/dns
+- package: github.com/opentracing/opentracing-go
+  version: ~1.0.1
+- package: github.com/openzipkin/zipkin-go-opentracing
+  version: ~0.2.2
+- package: github.com/prometheus/client_golang
+  version: ~0.8.0
+  subpackages:
+  - prometheus
+- package: github.com/prometheus/client_model
+  subpackages:
+  - go
+- package: github.com/prometheus/common
+  subpackages:
+  - expfmt
+- package: golang.org/x/net
+  subpackages:
+  - context
+- package: google.golang.org/grpc
+  version: ~1.0.5
+  subpackages:
+  - credentials
+- package: k8s.io/client-go
+  version: ~1.5.0
+  subpackages:
+  - 1.5/kubernetes
+  - 1.5/pkg/api
+  - 1.5/pkg/api/unversioned
+  - 1.5/pkg/api/v1
+  - 1.5/pkg/labels
+  - 1.5/pkg/runtime
+  - 1.5/pkg/watch
+  - 1.5/rest
+  - 1.5/tools/cache
+  - 1.5/tools/clientcmd
+  - 1.5/tools/clientcmd/api
+- package: github.com/emicklei/go-restful
+  version: ~1.0.0
