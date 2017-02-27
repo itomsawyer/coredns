@@ -175,7 +175,7 @@ try_again:
 		}
 
 		// better is the result set of all A that pass the filter with Route
-		better := addrSet{}
+		better := rrSet{}
 		for _, reply := range replys {
 			rrset := reply.Answer
 			for _, rr := range rrset {
@@ -188,6 +188,7 @@ try_again:
 							replyMsg = reply
 						}
 						v.Logger.Debug("ip addr has been accepted %s", a.A)
+						//TODO bugfix handle cname www.baidu.com -> www.a.shifen.com
 						better.Add(a)
 					}
 				}
@@ -196,7 +197,7 @@ try_again:
 
 		if len(better) > 0 {
 			// we got answer, return
-			replyMsg.Answer = better.RRSet()
+			replyMsg.Answer = better.Pack()
 			v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
 			w.WriteMsg(replyMsg)
 			return 0, nil
@@ -299,24 +300,20 @@ func DNSExWithTimeout(ctx context.Context, upstream *engine.Upstream, uphosts []
 	return
 }
 
-type addrSet map[string]*dns.A
+type rrSet map[string]dns.RR
 
-func (p addrSet) Add(a *dns.A) {
-	if a == nil || a.A == nil {
-		return
-	}
-
-	p[a.A.String()] = a
+func (p rrSet) Add(a dns.RR) {
+	p[a.String()] = a
 }
 
-func (p addrSet) RRSet() []dns.RR {
+func (p rrSet) Pack() []dns.RR {
 	if len(p) == 0 {
 		return nil
 	}
 
 	s := make([]dns.RR, 0, len(p))
-	for _, a := range p {
-		s = append(s, a)
+	for _, r := range p {
+		s = append(s, r)
 	}
 
 	return s

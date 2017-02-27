@@ -83,7 +83,7 @@ id int not null auto_increment,
 domain varchar(255) not null,
 domain_pool_id int,
 primary key(id),
-unique key(domain, domain_pool_id),
+unique key(domain),
 foreign key(domain_pool_id) references domain_pool(id) on delete cascade
 )DEFAULT CHARSET=utf8 comment "serve domains";
 
