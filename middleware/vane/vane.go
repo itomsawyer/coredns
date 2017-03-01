@@ -15,8 +15,9 @@ import (
 )
 
 var (
-	errUnreachable = errors.New("unreachable backend")
-	errFormatError = errors.New("format error")
+	errUnreachable     = errors.New("unreachable backend")
+	errUnexpectedLogic = errors.New("incorrect or incomplete data logic")
+	errFormatError     = errors.New("format error")
 
 	defaultMaxAttampts = 10
 	defaultTimeout     = 3 * time.Second
@@ -27,7 +28,14 @@ type Vane struct {
 	Debug           bool
 	Logger          *logs.BeeLogger
 	LogConfigs      []*engine.LogConfig
+	RcodePriority   *RcodePriority
 	Next            middleware.Handler
+}
+
+func NewVane() *Vane {
+	return &Vane{
+		RcodePriority: NewRcodePriority(),
+	}
 }
 
 func (v *Vane) InitLogger() error {
@@ -44,10 +52,12 @@ func (v *Vane) Name() string { return "vane" }
 
 func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
-		cip            net.IP
-		i, clientSetID int
-		ok             bool
-		replyMsg       *dns.Msg
+		cip             net.IP
+		i, clientSetID  int
+		ok              bool
+		replyMsg        *dns.Msg
+		replys          []*dns.Msg
+		retcode, bestrc int
 	)
 
 	if len(r.Question) == 0 {
@@ -97,7 +107,7 @@ try_again:
 			goto try_again
 		}
 
-		return dns.RcodeServerFailure, errUnreachable
+		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
 	v.Logger.Debug("get view %v", view)
@@ -109,7 +119,7 @@ try_again:
 			goto try_again
 		}
 
-		return dns.RcodeServerFailure, errUnreachable
+		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
 	//Policy is a method class to choose upstreamhost (ldns) from upstream (policy)
@@ -122,27 +132,21 @@ try_again:
 			goto try_again
 		}
 
-		return dns.RcodeServerFailure, errUnreachable
+		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
 	ex := NewExchangeHelper(view.Upstream, nil)
 	ex.Timeout = v.UpstreamTimeout
+	bestrc = dns.RcodeServerFailure
+	replyMsg = nil
+	replys = nil
 	for i = 0; i < defaultMaxAttampts; i++ {
 		v.Logger.Debug("try select upstream hosts")
 		// for each time policy choose the next prior upstreamhosts group
 		uphosts := policy.Select()
 		if len(uphosts) == 0 {
-			// There no upstream host can be found , try again the whole precedure with domainPoolID equals to
-			// default domainPoolID which is 1. Or the domainPoolID is already the default, Lookup failed the
-			// WARNING MUST be sent
-
-			if dmPoolID != engine.DefaultDomainPoolID {
-				dmPoolID = engine.DefaultDomainPoolID
-				v.Logger.Debug("fallback to default domain pool")
-				goto try_again
-			}
-
-			return dns.RcodeServerFailure, errUnreachable
+			// There no upstream host can be found , check out what we got.
+			break
 		}
 
 		if v.Debug {
@@ -154,7 +158,7 @@ try_again:
 		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
 		v.Logger.Debug("set upstream timeout: %s", v.UpstreamTimeout)
 		ex.Hosts = uphosts
-		replys := ex.DoExchange(ctx, state)
+		replys, retcode = ex.DoExchange(ctx, state)
 		if v.Debug {
 			for _, r := range replys {
 				v.Logger.Debug("get reply from upstream host :\n%v", r)
@@ -165,39 +169,56 @@ try_again:
 			continue
 		}
 
-		// No need to filter record with type is not, Get a proper one to return
+		v.Logger.Debug("found retcode %d with bestrc for now %d", retcode, bestrc)
+		if v.RcodePriority.PriorTo(retcode, bestrc) {
+			v.Logger.Debug("found better retcode: %d", bestrc)
+			v.Logger.Debug("it says: \n%v", replys)
+			bestrc = retcode
+			replyMsg = replys[0]
+		}
+
+		if retcode != dns.RcodeSuccess {
+			continue
+		}
+
+		// No need to filter record with type is not A, Get a proper one to return
 		if q.Qtype != dns.TypeA {
-			if len(replys) > 0 {
-				w.WriteMsg(replys[0])
+			if bestrc == dns.RcodeSuccess && replyMsg != nil {
+				w.WriteMsg(replyMsg)
 				return 0, nil
 			}
+
 			continue
 		}
 
 		// better is the result set of all A that pass the filter with Route
-		better := rrSet{}
+		better := make([]dns.RR, 0, 4)
+		rrset := rrSet{}
 		for _, reply := range replys {
-			rrset := reply.Answer
-			for _, rr := range rrset {
+			rrlist := reply.Answer
+			for _, rr := range rrlist {
 				if a, ok := rr.(*dns.A); ok {
-					netLinkID := e.GetNetLinkID(a.A)
-					routes := e.GetRoute(view.RouteSetID, dmPoolID, netLinkID)
-					// If has route, we consider the result to be valid
-					if len(routes) > 0 {
-						if replyMsg == nil {
-							replyMsg = reply
-						}
-						v.Logger.Debug("ip addr has been accepted %s", a.A)
-						//TODO bugfix handle cname www.baidu.com -> www.a.shifen.com
-						better.Add(a)
-					}
+					rrset.Add(a)
 				}
+			}
+		}
+
+		for _, rr := range rrset {
+			a := rr.(*dns.A)
+			netLinkID := e.GetNetLinkID(a.A)
+			routes := e.GetRoute(view.RouteSetID, dmPoolID, netLinkID)
+			// If has route, we consider the result to be valid
+			if len(routes) > 0 {
+				v.Logger.Debug("ip addr has been accepted %s", a.A)
+				a.Hdr.Name = q.Name
+				better = append(better, a)
 			}
 		}
 
 		if len(better) > 0 {
 			// we got answer, return
-			replyMsg.Answer = better.Pack()
+			v.Logger.Debug("Rewrite Msg: %v\n", replyMsg)
+			replyMsg.Answer = better
 			v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
 			w.WriteMsg(replyMsg)
 			return 0, nil
@@ -207,17 +228,29 @@ try_again:
 	}
 
 	if i == defaultMaxAttampts {
-		v.Logger.Error("MaxAttampts of upstream query reached, configuration or policy is badly configured")
+		v.Logger.Error("MaxAttampts of upstream query reached, configuration or policy maybe badly configured")
 	}
 
+	// try again the whole precedure with domainPoolID equals to
+	// default domainPoolID which is 1. Or the domainPoolID is already the default, Lookup failed
 	if dmPoolID != engine.DefaultDomainPoolID {
 		dmPoolID = engine.DefaultDomainPoolID
 		v.Logger.Warn("fallback to default domain pool for clientset: %d dmpool: %d", clientSetID, dmPoolID)
 		goto try_again
 	}
 
-	//LOG WARN: we tried our best but still got nothing
-	v.Logger.Error("vane cannot resolve for clientset: %d dmpool: %d", clientSetID, dmPoolID)
+	// TODO WARNING MUST be sent when we get here
+	// 1. replyMsg is not nil , bestrc is dns.RcodeSuccess: we filtered all of ip addr. At least, give out one answer
+	// 2. domain pool has falled back to default once and still got no good answer
 
-	return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
+	//return the best effort answer we get
+	v.Logger.Warn("vane cannot find a good answer for clientset: %d dmpool: %d", clientSetID, dmPoolID)
+	if replyMsg != nil {
+		w.WriteMsg(replyMsg)
+		return bestrc, nil
+	}
+
+	//we tried our best but still got nothing
+	v.Logger.Error("vane cannot resolve any answer for clientset: %d dmpool: %d", clientSetID, dmPoolID)
+	return dns.RcodeServerFailure, errUnreachable
 }

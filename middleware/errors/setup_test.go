@@ -27,6 +27,7 @@ func TestErrorsParse(t *testing.T) {
 			Debug:   true,
 		}},
 	}
+
 	for i, test := range tests {
 		c := caddy.NewTestController("dns", test.inputErrorsRules)
 		actualErrorsRule, err := errorsParse(c)

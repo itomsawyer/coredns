@@ -3,13 +3,14 @@ package engine
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/astaxie/beego/logs"
 	"github.com/mholt/caddy"
 )
 
 var (
-	supportLogTypeList = logs.AdapterFile
+	supportLogTypeList = strings.Join([]string{logs.AdapterConsole, logs.AdapterFile}, "|")
 
 	supportLevels = map[string]int{
 		"error": logs.LevelError,
@@ -61,6 +62,8 @@ func (lc *LogConfig) Marshal() (string, error) {
 func supportLogType(t string) bool {
 	switch t {
 	case logs.AdapterFile:
+		return true
+	case logs.AdapterConsole:
 		return true
 	default:
 		return false

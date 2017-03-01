@@ -17,16 +17,16 @@ func TestSetupVane(t *testing.T) {
 		// positive
 		{
 			`vane { 
-				db  root:@localhost/igw
+				upstream_timeout 1s
 			}`,
 			"perfect",
 			false,
 		},
 		{
 			`vane {
-				db 
+				upstream_timeout
 			}`,
-			"miss db args",
+			"miss upstream_timeout args",
 			true,
 		},
 	}

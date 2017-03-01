@@ -47,7 +47,7 @@ func setup(c *caddy.Controller) error {
 }
 
 func parseVane(c *caddy.Controller) (vane *Vane, err error) {
-	vane = new(Vane)
+	vane = NewVane()
 
 	for c.Next() {
 		if c.Val() == "vane" {

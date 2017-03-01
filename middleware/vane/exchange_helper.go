@@ -26,14 +26,14 @@ func NewExchangeHelper(u *engine.Upstream, hosts []*proxy.UpstreamHost) *Exchang
 	}
 }
 
-func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) (replys []*dns.Msg) {
+func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) (replys []*dns.Msg, retcode int) {
 	if h.Upstream == nil {
-		return nil
+		return nil, dns.RcodeServerFailure
 	}
 
 	ex := h.Upstream.Exchanger()
 	if ex == nil {
-		return nil
+		return nil, dns.RcodeServerFailure
 	}
 
 	if len(h.Hosts) == 1 {
@@ -45,12 +45,13 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 
 		if backendErr != nil {
 			uh.Fail()
-			return nil
+			return nil, dns.RcodeServerFailure
 		}
 
-		return []*dns.Msg{reply}
+		return []*dns.Msg{reply}, reply.Rcode
 	}
 
+	msgs := MsgSlice{}
 	out := make(chan *dns.Msg)
 	errChan := make(chan error)
 	wg := new(sync.WaitGroup)
@@ -98,12 +99,12 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 	for cnt := 0; cnt < len(h.Hosts); cnt++ {
 		select {
 		case reply := <-out:
-			replys = append(replys, reply)
+			msgs.Append(reply)
 		case <-errChan:
 		case <-t.C:
 			return
 		}
 	}
 
-	return
+	return msgs.Best()
 }
