@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 5.6.35, for Linux (i686)
+-- MySQL dump 10.13  Distrib 5.7.17, for macos10.12 (x86_64)
 --
 -- Host: localhost    Database: iwg
 -- ------------------------------------------------------
@@ -115,7 +115,7 @@ CREATE TABLE `domain` (
   `domain` varchar(255) NOT NULL,
   `domain_pool_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `domain` (`domain`,`domain_pool_id`),
+  UNIQUE KEY `domain` (`domain`),
   KEY `domain_pool_id` (`domain_pool_id`),
   CONSTRAINT `domain_ibfk_1` FOREIGN KEY (`domain_pool_id`) REFERENCES `domain_pool` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='serve domains';
@@ -141,6 +141,8 @@ CREATE TABLE `domain_pool` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(127) NOT NULL,
   `info` varchar(255) NOT NULL DEFAULT '',
+  `enable` tinyint(1) NOT NULL DEFAULT '1',
+  `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='serve domains set';
@@ -152,7 +154,7 @@ CREATE TABLE `domain_pool` (
 
 LOCK TABLES `domain_pool` WRITE;
 /*!40000 ALTER TABLE `domain_pool` DISABLE KEYS */;
-INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured');
+INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured',1,0);
 /*!40000 ALTER TABLE `domain_pool` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -436,9 +438,10 @@ DROP TABLE IF EXISTS `netlink`;
 CREATE TABLE `netlink` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `isp` varchar(127) NOT NULL,
-  `region` varchar(127) NOT NULL,
+  `region` varchar(127) NOT NULL DEFAULT '',
   `typ` varchar(32) NOT NULL DEFAULT 'normal',
-  PRIMARY KEY (`id`)
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `isp` (`isp`,`region`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='netlink (isp + province or CP) of a target ip';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -834,7 +837,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `base_route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,`route`.`priority` AS `route_priority`,`route`.`score` AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`) and (`outlink`.`enable` = 1) and (`route`.`enable` = 1) and (`outlink`.`unavailable` = 0) and (`route`.`unavailable` = 0)) */;
+/*!50001 VIEW `base_route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,`route`.`priority` AS `route_priority`,`route`.`score` AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`) and (`outlink`.`enable` = 1) and (`route`.`enable` = 1) and (`outlink`.`unavailable` = 0) and (`route`.`unavailable` = 0) and (`route`.`score` <> 0)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -888,7 +891,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `domain_view` AS select `domain`.`id` AS `domain_id`,`domain`.`domain` AS `domain`,`domain`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `pool_name` from (`domain` join `domain_pool` on((`domain`.`domain_pool_id` = `domain_pool`.`id`))) */;
+/*!50001 VIEW `domain_view` AS select `domain`.`id` AS `domain_id`,`domain`.`domain` AS `domain`,`domain`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `pool_name` from (`domain` join `domain_pool` on((`domain`.`domain_pool_id` = `domain_pool`.`id`))) where ((`domain_pool`.`enable` = 1) and (`domain_pool`.`unavailable` = 0)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -906,7 +909,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `dst_view` AS select `domainlink`.`domain_pool_id` AS `domain_pool_id`,`domainlink`.`netlink_id` AS `netlink_id`,`domainlink`.`netlinkset_id` AS `netlinkset_id`,`domain_pool`.`name` AS `domain_pool_name`,`netlink`.`isp` AS `isp`,`netlink`.`region` AS `region` from ((`domain_pool` join `netlink`) join `domainlink`) where ((`domain_pool`.`id` = `domainlink`.`domain_pool_id`) and (`netlink`.`id` = `domainlink`.`netlink_id`) and (`domainlink`.`enable` = 1)) */;
+/*!50001 VIEW `dst_view` AS select `domainlink`.`domain_pool_id` AS `domain_pool_id`,`domainlink`.`netlink_id` AS `netlink_id`,`domainlink`.`netlinkset_id` AS `netlinkset_id`,`domain_pool`.`name` AS `domain_pool_name`,`netlink`.`isp` AS `isp`,`netlink`.`region` AS `region` from ((`domain_pool` join `netlink`) join `domainlink`) where ((`domain_pool`.`id` = `domainlink`.`domain_pool_id`) and (`netlink`.`id` = `domainlink`.`netlink_id`) and (`domain_pool`.`enable` = 1) and (`domain_pool`.`unavailable` = 0) and (`domainlink`.`enable` = 1)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -996,7 +999,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,min(`route`.`priority`) AS `route_priority`,max(`route`.`score`) AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`) and (`outlink`.`enable` = 1) and (`route`.`enable` = 1) and (`outlink`.`unavailable` = 0) and (`route`.`unavailable` = 0)) group by `route`.`routeset_id` */;
+/*!50001 VIEW `route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,min(`route`.`priority`) AS `route_priority`,max(`route`.`score`) AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`) and (`outlink`.`enable` = 1) and (`route`.`enable` = 1) and (`outlink`.`unavailable` = 0) and (`route`.`unavailable` = 0) and (`route`.`score` <> 0)) group by `route`.`routeset_id` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1014,7 +1017,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `src_view` AS select `viewer`.`clientset_id` AS `clientset_id`,`clientset`.`name` AS `clientset_name`,`viewer`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `domain_pool_name`,`viewer`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`viewer`.`policy_id` AS `policy_id`,`policy`.`name` AS `policy_name` from ((((`clientset` join `domain_pool`) join `viewer`) join `routeset`) join `policy`) where ((`clientset`.`id` = `viewer`.`clientset_id`) and (`domain_pool`.`id` = `viewer`.`domain_pool_id`) and (`routeset`.`id` = `viewer`.`routeset_id`) and (`policy`.`id` = `viewer`.`policy_id`) and (`viewer`.`enable` = 1)) */;
+/*!50001 VIEW `src_view` AS select `viewer`.`clientset_id` AS `clientset_id`,`clientset`.`name` AS `clientset_name`,`viewer`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `domain_pool_name`,`viewer`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`viewer`.`policy_id` AS `policy_id`,`policy`.`name` AS `policy_name` from ((((`clientset` join `domain_pool`) join `viewer`) join `routeset`) join `policy`) where ((`clientset`.`id` = `viewer`.`clientset_id`) and (`domain_pool`.`id` = `viewer`.`domain_pool_id`) and (`routeset`.`id` = `viewer`.`routeset_id`) and (`policy`.`id` = `viewer`.`policy_id`) and (`domain_pool`.`enable` = 1) and (`domain_pool`.`unavailable` = 0) and (`viewer`.`enable` = 1)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1028,4 +1031,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-02-14 19:28:51
+-- Dump completed on 2017-03-02  2:11:07
