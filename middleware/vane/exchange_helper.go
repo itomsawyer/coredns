@@ -1,0 +1,109 @@
+package vane
+
+import (
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/coredns/coredns/middleware/proxy"
+	"github.com/coredns/coredns/middleware/vane/engine"
+	"github.com/coredns/coredns/request"
+
+	"github.com/miekg/dns"
+	"golang.org/x/net/context"
+)
+
+type ExchangeHelper struct {
+	Upstream *engine.Upstream
+	Hosts    []*proxy.UpstreamHost
+	Timeout  time.Duration
+}
+
+func NewExchangeHelper(u *engine.Upstream, hosts []*proxy.UpstreamHost) *ExchangeHelper {
+	return &ExchangeHelper{
+		Upstream: u,
+		Hosts:    hosts,
+	}
+}
+
+func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) (replys []*dns.Msg) {
+	if h.Upstream == nil {
+		return nil
+	}
+
+	ex := h.Upstream.Exchanger()
+	if ex == nil {
+		return nil
+	}
+
+	if len(h.Hosts) == 1 {
+		uh := h.Hosts[0]
+
+		atomic.AddInt64(&uh.Conns, 1)
+		reply, backendErr := ex.Exchange(ctx, uh.Name, state)
+		atomic.AddInt64(&uh.Conns, -1)
+
+		if backendErr != nil {
+			uh.Fail()
+			return nil
+		}
+
+		return []*dns.Msg{reply}
+	}
+
+	out := make(chan *dns.Msg)
+	errChan := make(chan error)
+	wg := new(sync.WaitGroup)
+	done := make(chan struct{})
+
+	for i := 0; i < len(h.Hosts); i++ {
+		wg.Add(1)
+		go func(uh *proxy.UpstreamHost) {
+			atomic.AddInt64(&uh.Conns, 1)
+			reply, backendErr := ex.Exchange(ctx, uh.Name, state)
+			atomic.AddInt64(&uh.Conns, -1)
+
+			if backendErr == nil {
+				select {
+				case out <- reply:
+				case <-done:
+				}
+			} else {
+				select {
+				case errChan <- backendErr:
+				case <-done:
+				}
+				uh.Fail()
+			}
+
+			wg.Done()
+		}(h.Hosts[i])
+	}
+
+	defer func() {
+		close(done)
+		go func() {
+			wg.Wait()
+			close(out)
+			close(errChan)
+		}()
+	}()
+
+	if h.Timeout == 0 {
+		h.Timeout = defaultTimeout
+	}
+
+	t := time.NewTimer(h.Timeout)
+
+	for cnt := 0; cnt < len(h.Hosts); cnt++ {
+		select {
+		case reply := <-out:
+			replys = append(replys, reply)
+		case <-errChan:
+		case <-t.C:
+			return
+		}
+	}
+
+	return
+}

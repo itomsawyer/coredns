@@ -3,12 +3,9 @@ package vane
 import (
 	"errors"
 	"net"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/coredns/coredns/middleware"
-	"github.com/coredns/coredns/middleware/proxy"
 	"github.com/coredns/coredns/middleware/vane/engine"
 	"github.com/coredns/coredns/request"
 
@@ -128,6 +125,8 @@ try_again:
 		return dns.RcodeServerFailure, errUnreachable
 	}
 
+	ex := NewExchangeHelper(view.Upstream, nil)
+	ex.Timeout = v.UpstreamTimeout
 	for i = 0; i < defaultMaxAttampts; i++ {
 		v.Logger.Debug("try select upstream hosts")
 		// for each time policy choose the next prior upstreamhosts group
@@ -154,7 +153,8 @@ try_again:
 
 		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
 		v.Logger.Debug("set upstream timeout: %s", v.UpstreamTimeout)
-		replys := DNSExWithTimeout(ctx, view.Upstream, uphosts, state, v.UpstreamTimeout)
+		ex.Hosts = uphosts
+		replys := ex.DoExchange(ctx, state)
 		if v.Debug {
 			for _, r := range replys {
 				v.Logger.Debug("get reply from upstream host :\n%v", r)
@@ -220,101 +220,4 @@ try_again:
 	v.Logger.Error("vane cannot resolve for clientset: %d dmpool: %d", clientSetID, dmPoolID)
 
 	return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
-}
-
-func DNSExWithTimeout(ctx context.Context, upstream *engine.Upstream, uphosts []*proxy.UpstreamHost, state request.Request, timeout time.Duration) (replys []*dns.Msg) {
-	ex := upstream.Exchanger()
-	if ex == nil {
-		return nil
-	}
-
-	if len(uphosts) == 1 {
-		uh := uphosts[0]
-
-		atomic.AddInt64(&uh.Conns, 1)
-		reply, backendErr := ex.Exchange(ctx, uh.Name, state)
-		atomic.AddInt64(&uh.Conns, -1)
-
-		if backendErr != nil {
-			uh.Fail()
-			return nil
-		}
-
-		return []*dns.Msg{reply}
-	}
-
-	out := make(chan *dns.Msg)
-	errChan := make(chan error)
-	wg := new(sync.WaitGroup)
-	done := make(chan struct{})
-
-	for i := 0; i < len(uphosts); i++ {
-		wg.Add(1)
-		go func(uh *proxy.UpstreamHost) {
-			atomic.AddInt64(&uh.Conns, 1)
-			reply, backendErr := ex.Exchange(ctx, uh.Name, state)
-			atomic.AddInt64(&uh.Conns, -1)
-
-			if backendErr == nil {
-				select {
-				case out <- reply:
-				case <-done:
-				}
-			} else {
-				select {
-				case errChan <- backendErr:
-				case <-done:
-				}
-				uh.Fail()
-			}
-
-			wg.Done()
-		}(uphosts[i])
-	}
-
-	defer func() {
-		close(done)
-		go func() {
-			wg.Wait()
-			close(out)
-			close(errChan)
-		}()
-	}()
-
-	if timeout == 0 {
-		timeout = defaultTimeout
-	}
-
-	t := time.NewTimer(timeout)
-
-	for cnt := 0; cnt < len(uphosts); cnt++ {
-		select {
-		case reply := <-out:
-			replys = append(replys, reply)
-		case <-errChan:
-		case <-t.C:
-			return
-		}
-	}
-
-	return
-}
-
-type rrSet map[string]dns.RR
-
-func (p rrSet) Add(a dns.RR) {
-	p[a.String()] = a
-}
-
-func (p rrSet) Pack() []dns.RR {
-	if len(p) == 0 {
-		return nil
-	}
-
-	s := make([]dns.RR, 0, len(p))
-	for _, r := range p {
-		s = append(s, r)
-	}
-
-	return s
 }
