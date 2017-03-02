@@ -166,6 +166,16 @@ func TestDmTreeWild(t *testing.T) {
 		t.Errorf("expect value 2 get", v)
 	}
 
+	//XXX Warning: THIS feature is not the same with dns wildcard domain protocol.
+	//             BUT this is what we want.
+	v, ok = dt.Find("a.static.qq.com")
+	if !ok {
+		t.Errorf("unexpected not found")
+	}
+	if v == nil || v.(int) != 1 {
+		t.Errorf("expect value 2 get", v)
+	}
+
 	return
 }
 

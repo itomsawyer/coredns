@@ -310,7 +310,7 @@ select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.n
 from netlinkset, outlink, route, routeset
 where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
 and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0
-group by routeset_id;
+group by routeset_id, netlinkset_id;
 
 
 create ALGORITHM = MERGE view base_route_view as
