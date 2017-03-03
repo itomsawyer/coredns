@@ -331,7 +331,7 @@ CREATE TABLE `ipnet_wl` (
   UNIQUE KEY `ip_start` (`ip_start`,`ip_end`),
   KEY `clientset_id` (`clientset_id`),
   CONSTRAINT `ipnet_wl_ibfk_1` FOREIGN KEY (`clientset_id`) REFERENCES `clientset` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='client ipnet whitelist';
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='client ipnet whitelist';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -340,7 +340,7 @@ CREATE TABLE `ipnet_wl` (
 
 LOCK TABLES `ipnet_wl` WRITE;
 /*!40000 ALTER TABLE `ipnet_wl` DISABLE KEYS */;
-INSERT INTO `ipnet_wl` VALUES (1,'192.168.1.0','192.168.1.1','192.168.1.0',31,2);
+INSERT INTO `ipnet_wl` VALUES (1,'192.168.1.0','192.168.1.1','192.168.1.0',31,2),(2,'10.0.0.0','10.255.255.255','10.0.0.0',8,1);
 /*!40000 ALTER TABLE `ipnet_wl` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -518,7 +518,7 @@ CREATE TABLE `netlinkset` (
   `name` varchar(127) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=utf8 COMMENT='netlink set ';
+) ENGINE=InnoDB AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='netlink set ';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1045,4 +1045,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-03  2:11:18
+-- Dump completed on 2017-03-03 15:50:57

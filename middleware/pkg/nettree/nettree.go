@@ -11,19 +11,20 @@ var (
 )
 
 type NetTree struct {
-	node  [2]*NetTree
-	value interface{}
+	node     [2]*NetTree
+	value    interface{}
+	priority int
 }
 
-func (t *NetTree) Insert(key uint32, bits int, v interface{}) error {
-	return t.insert(key, bits, v, false)
+func (t *NetTree) Insert(key uint32, bits int, v interface{}, prior int) error {
+	return t.insert(key, bits, v, prior, false)
 }
 
-func (t *NetTree) InsertOrUpdate(key uint32, bits int, v interface{}) error {
-	return t.insert(key, bits, v, true)
+func (t *NetTree) InsertOrUpdate(key uint32, bits int, v interface{}, prior int) error {
+	return t.insert(key, bits, v, prior, true)
 }
 
-func (t *NetTree) insert(key uint32, bits int, v interface{}, force bool) error {
+func (t *NetTree) insert(key uint32, bits int, v interface{}, prior int, force bool) error {
 	if bits < 0 || bits > 32 {
 		return errBitsRangeInvalid
 	}
@@ -56,11 +57,12 @@ func (t *NetTree) insert(key uint32, bits int, v interface{}, force bool) error 
 	}
 
 	cur.value = v
+	cur.priority = prior
 	return nil
 }
 
 func (t *NetTree) Find(key uint32, bits int) interface{} {
-	var found interface{}
+	var found *NetTree
 
 	if bits < 0 || bits > 32 {
 		return nil
@@ -68,7 +70,7 @@ func (t *NetTree) Find(key uint32, bits int) interface{} {
 
 	cur := t
 	if cur.value != nil {
-		found = cur.value
+		found = cur
 	}
 
 	for i := 0; i < bits; i++ {
@@ -85,26 +87,32 @@ func (t *NetTree) Find(key uint32, bits int) interface{} {
 			cur = cur.node[1]
 		}
 
-		if cur.value != nil {
-			found = cur.value
+		if cur.value == nil {
+			continue
 		}
+
+		if found != nil && cur.priority < found.priority {
+			continue
+		}
+
+		found = cur
 	}
 
-	return found
+	return found.value
 }
 
-func (t *NetTree) InsertByIPNet(cidr *net.IPNet, v interface{}) error {
+func (t *NetTree) InsertByIPNet(cidr *net.IPNet, v interface{}, prior int) error {
 	size, _ := cidr.Mask.Size()
-	return t.Insert(ipToUint(cidr.IP.To4()), size, v)
+	return t.Insert(ipToUint(cidr.IP.To4()), size, v, prior)
 }
 
-func (t *NetTree) InsertOrUpdateByIPNet(cidr *net.IPNet, v interface{}) error {
+func (t *NetTree) InsertOrUpdateByIPNet(cidr *net.IPNet, v interface{}, prior int) error {
 	if cidr == nil {
 		return errors.New("invalid cidr which is nil")
 	}
 
 	size, _ := cidr.Mask.Size()
-	return t.InsertOrUpdate(ipToUint(cidr.IP.To4()), size, v)
+	return t.InsertOrUpdate(ipToUint(cidr.IP.To4()), size, v, prior)
 }
 
 func (t *NetTree) FindByIP(ip net.IP) interface{} {

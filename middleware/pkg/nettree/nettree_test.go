@@ -33,8 +33,8 @@ func TestGetBitFromInt(t *testing.T) {
 
 func TestingGetExactly(t *testing.T) {
 	nt := new(NetTree)
-	nt.Insert(1, 32, 1)
-	nt.Insert(7, 32, 7)
+	nt.Insert(1, 32, 1, 0)
+	nt.Insert(7, 32, 7, 0)
 	if v := nt.Find(1, 32); v.(int) != 1 {
 		t.Errorf("shoud find 1")
 	}
@@ -45,11 +45,11 @@ func TestingGetExactly(t *testing.T) {
 
 func TestCovering(t *testing.T) {
 	nt := new(NetTree)
-	err := nt.Insert(0x0100, 24, 1)
+	err := nt.Insert(0x0100, 24, 1, 0)
 	if err != nil {
 		t.Error(err)
 	}
-	err = nt.Insert(0x0300, 24, 3)
+	err = nt.Insert(0x0300, 24, 3, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -63,11 +63,11 @@ func TestCovering(t *testing.T) {
 
 func TestOverlap(t *testing.T) {
 	nt := new(NetTree)
-	err := nt.Insert(0x0100, 24, 1)
+	err := nt.Insert(0x0100, 24, 1, 0)
 	if err != nil {
 		t.Error(err)
 	}
-	err = nt.Insert(0x01f0, 28, 2)
+	err = nt.Insert(0x01f0, 28, 2, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -84,11 +84,11 @@ func TestOverlap(t *testing.T) {
 
 func TestRoot(t *testing.T) {
 	nt := new(NetTree)
-	err := nt.Insert(0, 0, 0)
+	err := nt.Insert(0, 0, 0, 0)
 	if err != nil {
 		t.Error(err)
 	}
-	err = nt.Insert(0x01f0, 28, 1)
+	err = nt.Insert(0x01f0, 28, 1, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -107,12 +107,12 @@ func TestOverlapByIPNet(t *testing.T) {
 	nt := new(NetTree)
 
 	_, cidr, _ := net.ParseCIDR("1.1.1.128/24")
-	err := nt.InsertByIPNet(cidr, 0)
+	err := nt.InsertByIPNet(cidr, 0, 0)
 	if err != nil {
 		t.Error(err)
 	}
 	_, cidr, _ = net.ParseCIDR("1.1.1.128/28")
-	err = nt.InsertByIPNet(cidr, 1)
+	err = nt.InsertByIPNet(cidr, 1, 0)
 	if err != nil {
 		t.Error(err)
 	}
@@ -122,5 +122,37 @@ func TestOverlapByIPNet(t *testing.T) {
 	}
 	if v := nt.FindByIP(net.ParseIP("1.1.1.129")); v.(int) != 1 {
 		t.Errorf("shoud find 1")
+	}
+}
+
+func TestOverlapByIPNetWithPrio(t *testing.T) {
+	nt := new(NetTree)
+
+	_, cidr, _ := net.ParseCIDR("1.1.0.0/16")
+	err := nt.InsertByIPNet(cidr, -1, 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, cidr, _ = net.ParseCIDR("1.1.1.128/24")
+	err = nt.InsertByIPNet(cidr, 0, 1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	_, cidr, _ = net.ParseCIDR("1.1.1.128/28")
+	err = nt.InsertByIPNet(cidr, 1, 0)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if v := nt.FindByIP(net.ParseIP("1.1.0.1")); v.(int) != -1 {
+		t.Errorf("shoud find -1")
+	}
+	if v := nt.FindByIP(net.ParseIP("1.1.1.1")); v.(int) != 0 {
+		t.Errorf("shoud find 0")
+	}
+	if v := nt.FindByIP(net.ParseIP("1.1.1.129")); v.(int) != 0 {
+		t.Errorf("shoud find 0")
 	}
 }

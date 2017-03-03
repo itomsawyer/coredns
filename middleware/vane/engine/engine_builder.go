@@ -136,7 +136,7 @@ func (b *EngineBuilder) BuildClientSet(e *Engine) error {
 			return err
 		}
 
-		err = e.AddClient(ipnet, v.ClientSetId, v.ClientSetName)
+		err = e.AddClient(ipnet, v.ClientSetId, v.ClientSetName, 0)
 		if err != nil {
 			b.Logger.Error("AddClientSet %v failed, %s", v, err)
 			return err
@@ -150,7 +150,7 @@ func (b *EngineBuilder) BuildClientSet(e *Engine) error {
 			return err
 		}
 
-		err = e.AddClient(ipnet, v.ClientSetId, v.ClientSetName)
+		err = e.AddClient(ipnet, v.ClientSetId, v.ClientSetName, 1)
 		if err != nil {
 			b.Logger.Error("AddClientSetWL %v failed, %s", v, err)
 			return err
@@ -168,7 +168,7 @@ func (b *EngineBuilder) BuildNetLink(e *Engine) error {
 			return err
 		}
 
-		err = e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region)
+		err = e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region, 0)
 		if err != nil {
 			b.Logger.Error("AddNetLink %v failed, %s", v, err)
 			return err
@@ -182,7 +182,7 @@ func (b *EngineBuilder) BuildNetLink(e *Engine) error {
 			return err
 		}
 
-		err = e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region)
+		err = e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region, 1)
 		if err != nil {
 			b.Logger.Error("AddNetLinkWL %v failed, %s", v, err)
 			return err

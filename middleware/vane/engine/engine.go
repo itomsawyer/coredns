@@ -203,20 +203,21 @@ func (e *Engine) GetDomainLink(domainpool_id, netlink_id int) (DomainLink, error
 	return DomainLink{}, errors.New("DomainLink not found")
 }
 
-func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string) error {
+func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string, prior int) error {
 	cs := ClientSet{
 		ID:    id,
 		Name:  name,
 		IPNet: ipnet,
 	}
+
 	if e.ClientSet == nil {
 		e.ClientSet = new(nettree.NetTree)
 	}
 
-	return e.ClientSet.InsertByIPNet(cs.IPNet, cs)
+	return e.ClientSet.InsertByIPNet(cs.IPNet, cs, prior)
 }
 
-func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string) error {
+func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string, prior int) error {
 	nl := NetLink{
 		ID:     id,
 		Isp:    isp,
@@ -228,7 +229,7 @@ func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string)
 		e.NetLink = new(nettree.NetTree)
 	}
 
-	return e.NetLink.InsertByIPNet(nl.IPNet, nl)
+	return e.NetLink.InsertByIPNet(nl.IPNet, nl, prior)
 }
 
 func (e *Engine) AddDomain(id int, domain string, dmpool_id int, dmpool_name string) error {
