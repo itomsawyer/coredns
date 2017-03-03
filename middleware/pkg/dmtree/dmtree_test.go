@@ -6,8 +6,9 @@ import (
 
 func TestDmTreeRoot(t *testing.T) {
 	var (
-		ok bool
-		v  interface{}
+		ok      bool
+		v       interface{}
+		domains = []string{"a.", ".", "a", ""}
 	)
 
 	dt := new(DmTree)
@@ -23,15 +24,15 @@ func TestDmTreeRoot(t *testing.T) {
 		return
 	}
 
-	v, ok = dt.Find("a.")
-	if !ok {
-		t.Errorf("unexpected not found")
-		return
-	}
+	for _, d := range domains {
+		v, ok = dt.Find("a.")
+		if !ok {
+			t.Errorf("unexpected not found for %s", d)
+		}
 
-	if v == nil || v.(int) != 1 {
-		t.Errorf("unexpected value")
-		return
+		if v == nil || v.(int) != 1 {
+			t.Errorf("unexpected value for %s", d)
+		}
 	}
 }
 
@@ -139,7 +140,15 @@ func TestDmTreeWild(t *testing.T) {
 		t.Errorf("unexpected not found")
 	}
 	if v == nil || v.(int) != 0 {
-		t.Errorf("expect value 1 get", v)
+		t.Errorf("expect value 0 get", v)
+	}
+
+	v, ok = dt.Find("qq.com")
+	if !ok {
+		t.Errorf("unexpected not found")
+	}
+	if v == nil || v.(int) != 0 {
+		t.Errorf("expect value 0 get %d", v)
 	}
 
 	v, ok = dt.Find("a.qq.com")
@@ -173,7 +182,7 @@ func TestDmTreeWild(t *testing.T) {
 		t.Errorf("unexpected not found")
 	}
 	if v == nil || v.(int) != 1 {
-		t.Errorf("expect value 2 get", v)
+		t.Errorf("expect value 1 get", v)
 	}
 
 	return
@@ -186,16 +195,17 @@ func TestDmTreeWild2(t *testing.T) {
 	)
 
 	dt := new(DmTree)
-	dt.Insert(".", 0)
 	dt.Insert("*.qq.com", 1)
 	dt.Insert("static.qq.com", 2)
 
 	v, ok = dt.Find("www.baidu.com")
-	if !ok {
-		t.Errorf("unexpected not found")
+	if ok {
+		t.Errorf("unexpected found")
 	}
-	if v == nil || v.(int) != 0 {
-		t.Errorf("expect value 1 get", v)
+
+	v, ok = dt.Find("qq.com")
+	if ok {
+		t.Errorf("unexpected found")
 	}
 
 	v, ok = dt.Find("a.qq.com")
@@ -223,4 +233,26 @@ func TestDmTreeWild2(t *testing.T) {
 	}
 
 	return
+}
+
+func TestDmTreeNilValue(t *testing.T) {
+	var ok bool
+
+	dt := new(DmTree)
+	dt.Insert(".qq.com", nil)
+
+	_, ok = dt.Find("a.qq.com")
+	if ok {
+		t.Errorf("unexpected found")
+	}
+
+	_, ok = dt.Find("com")
+	if ok {
+		t.Errorf("unexpected found")
+	}
+
+	_, ok = dt.Find("static.qq.com.")
+	if ok {
+		t.Errorf("unexpected found")
+	}
 }

@@ -53,9 +53,8 @@ func (t *DmTree) Find(domain string) (interface{}, bool) {
 		next = node
 	}
 
-	if i < 0 {
-		found = next
-		v = found.Value
+	if i < 0 && next.Value != nil {
+		v = next.Value
 		return v, true
 	}
 
