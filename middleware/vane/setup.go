@@ -28,15 +28,8 @@ func setup(c *caddy.Controller) error {
 		return err
 	}
 
-	c.OnStartup(func() error {
-		err = v.InitLogger()
-		if err != nil {
-			return err
-		}
-
-		v.Logger.Info("vane start success")
-		return nil
-	})
+	c.OnStartup(v.Init)
+	c.OnShutdown(v.Destroy)
 
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
 		v.Next = next

@@ -9,10 +9,11 @@ import (
 )
 
 type DomainView struct {
-	DomainId     int    `orm:"pk"`
-	Domain       string `orm:"size(128)"`
-	DomainPoolId int
-	PoolName     string `orm:"size(128)"`
+	DomainId      int    `orm:"pk"`
+	Domain        string `orm:"size(128)"`
+	DomainPoolId  int
+	PoolName      string `orm:"size(128)"`
+	DomainMonitor bool
 }
 
 func (t *DomainView) TableName() string {

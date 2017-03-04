@@ -72,6 +72,7 @@ name varchar(127) not null ,
 info varchar(255) not null default "",
 enable bool not null default true,
 unavailable smallint unsigned not null default 0,
+domain_monitor bool not null default false,
 primary key (id),
 unique key (name)
 )DEFAULT CHARSET=utf8 comment "serve domains set";

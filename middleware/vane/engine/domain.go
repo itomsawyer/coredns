@@ -5,4 +5,5 @@ type Domain struct {
 	Domain   string
 	DmPoolID int
 	DmPool   string
+	Monitor  bool
 }

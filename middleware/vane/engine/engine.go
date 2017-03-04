@@ -13,6 +13,7 @@ import (
 var (
 	DefaultClientSetID  = 1
 	DefaultDomainPoolID = 1
+	DefaultDomainPool   = Domain{ID: 0, Domain: ".", DmPoolID: 1, DmPool: "default", Monitor: false}
 	DefaultNetLinkID    = 1
 )
 
@@ -117,7 +118,6 @@ func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 }
 
 func (e *Engine) GetDomainPoolID(domain string) int {
-
 	dm, err := e.GetDomain(domain)
 	if err != nil {
 		return DefaultDomainPoolID
@@ -232,14 +232,7 @@ func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string,
 	return e.NetLink.InsertByIPNet(nl.IPNet, nl, prior)
 }
 
-func (e *Engine) AddDomain(id int, domain string, dmpool_id int, dmpool_name string) error {
-	d := Domain{
-		ID:       id,
-		Domain:   domain,
-		DmPoolID: dmpool_id,
-		DmPool:   dmpool_name,
-	}
-
+func (e *Engine) AddDomain(d Domain) error {
 	if e.Domain == nil {
 		e.Domain = new(dmtree.DmTree)
 	}

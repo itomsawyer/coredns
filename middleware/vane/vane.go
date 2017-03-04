@@ -38,13 +38,22 @@ func NewVane() *Vane {
 	}
 }
 
-func (v *Vane) InitLogger() error {
+func (v *Vane) Init() error {
 	l, err := engine.CreateLogger(v.LogConfigs)
 	if err != nil {
 		return err
 	}
 
 	v.Logger = l
+	v.Logger.Info("vane start success")
+	return nil
+}
+
+func (v *Vane) Destroy() error {
+	if v.Logger != nil {
+		v.Logger.Close()
+	}
+
 	return nil
 }
 
@@ -93,16 +102,20 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	}
 
 	// Get domainpool_id , if not found e.GetDomainPoolID return engine.DefaultDomainPoolID
-	dmPoolID := e.GetDomainPoolID(q.Name)
+	domain, err := e.GetDomain(q.Name)
+	if err != nil {
+		domain = engine.DefaultDomainPool
+	}
+
 	v.Logger.Debug("query domain %s", q.Name)
-	v.Logger.Debug("get domain pool id: %d", dmPoolID)
+	v.Logger.Debug("get domain pool id: %d", domain.DmPoolID)
 
 try_again:
 
-	view, err := e.GetView(clientSetID, dmPoolID)
+	view, err := e.GetView(clientSetID, domain.DmPoolID)
 	if err != nil {
-		if dmPoolID != engine.DefaultDomainPoolID {
-			dmPoolID = engine.DefaultDomainPoolID
+		if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
+			domain = engine.DefaultDomainPool
 			v.Logger.Debug("fallback to default domain pool")
 			goto try_again
 		}
@@ -113,8 +126,8 @@ try_again:
 	v.Logger.Debug("get view %v", view)
 
 	if view.Upstream == nil {
-		if dmPoolID != engine.DefaultDomainPoolID {
-			dmPoolID = engine.DefaultDomainPoolID
+		if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
+			domain = engine.DefaultDomainPool
 			v.Logger.Debug("fallback to default domain pool")
 			goto try_again
 		}
@@ -125,9 +138,8 @@ try_again:
 	//Policy is a method class to choose upstreamhost (ldns) from upstream (policy)
 	policy := view.Upstream.GetPolicy()
 	if policy == nil {
-
-		if dmPoolID != engine.DefaultDomainPoolID {
-			dmPoolID = engine.DefaultDomainPoolID
+		if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
+			domain = engine.DefaultDomainPool
 			v.Logger.Debug("fallback to default domain pool")
 			goto try_again
 		}
@@ -206,25 +218,32 @@ try_again:
 		for _, rr := range rrset {
 			a := rr.(*dns.A)
 			netLinkID := e.GetNetLinkID(a.A)
-			routes := e.GetRoute(view.RouteSetID, dmPoolID, netLinkID)
+			routes := e.GetRoute(view.RouteSetID, domain.DmPoolID, netLinkID)
 			// If has route, we consider the result to be valid
-			if len(routes) > 0 {
-				v.Logger.Debug("ip addr has been accepted %s", a.A)
-				a.Hdr.Name = q.Name
-				better = append(better, a)
+			if len(routes) == 0 {
+				continue
 			}
+
+			if domain.Monitor {
+				v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
+			}
+
+			v.Logger.Debug("ip addr has been accepted %s", a.A)
+			a.Hdr.Name = q.Name
+			better = append(better, a)
 		}
 
-		if len(better) > 0 {
-			// we got answer, return
-			v.Logger.Debug("Rewrite Msg: %v\n", replyMsg)
-			replyMsg.Answer = better
-			v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
-			w.WriteMsg(replyMsg)
-			return 0, nil
+		if len(better) == 0 {
+			// No luck for this time, try to ask other upstreamhosts
+			continue
 		}
 
-		// No luck for this time, try to ask other upstreamhosts
+		// we got answer, return
+		v.Logger.Debug("Rewrite Msg: %v\n", replyMsg)
+		replyMsg.Answer = better
+		v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
+		w.WriteMsg(replyMsg)
+		return 0, nil
 	}
 
 	if i == defaultMaxAttampts {
@@ -233,9 +252,10 @@ try_again:
 
 	// try again the whole precedure with domainPoolID equals to
 	// default domainPoolID which is 1. Or the domainPoolID is already the default, Lookup failed
-	if dmPoolID != engine.DefaultDomainPoolID {
-		dmPoolID = engine.DefaultDomainPoolID
-		v.Logger.Warn("fallback to default domain pool for clientset: %d dmpool: %d", clientSetID, dmPoolID)
+
+	if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
+		domain = engine.DefaultDomainPool
+		v.Logger.Debug("fallback to default domain pool")
 		goto try_again
 	}
 
@@ -244,13 +264,13 @@ try_again:
 	// 2. domain pool has falled back to default once and still got no good answer
 
 	//return the best effort answer we get
-	v.Logger.Warn("vane cannot find a good answer for clientset: %d dmpool: %d", clientSetID, dmPoolID)
+	v.Logger.Warn("vane cannot find a good answer for clientset: %d dmpool: %d", clientSetID, domain.DmPoolID)
 	if replyMsg != nil {
 		w.WriteMsg(replyMsg)
 		return bestrc, nil
 	}
 
 	//we tried our best but still got nothing
-	v.Logger.Error("vane cannot resolve any answer for clientset: %d dmpool: %d", clientSetID, dmPoolID)
+	v.Logger.Error("vane cannot resolve any answer for clientset: %d dmpool: %d", clientSetID, domain.DmPoolID)
 	return dns.RcodeServerFailure, errUnreachable
 }

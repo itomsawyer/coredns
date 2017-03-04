@@ -144,6 +144,7 @@ CREATE TABLE `domain_pool` (
   `info` varchar(255) NOT NULL DEFAULT '',
   `enable` tinyint(1) NOT NULL DEFAULT '1',
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `domain_monitor` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COMMENT='serve domains set';
@@ -155,7 +156,7 @@ CREATE TABLE `domain_pool` (
 
 LOCK TABLES `domain_pool` WRITE;
 /*!40000 ALTER TABLE `domain_pool` DISABLE KEYS */;
-INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured',1,0),(2,'chilian','domains prefer chilian',1,0),(3,'unicom','domains prefer cu',1,0);
+INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured',1,0,0),(2,'chilian','domains prefer chilian',1,0,0),(3,'unicom','domains prefer cu',1,0,0);
 /*!40000 ALTER TABLE `domain_pool` ENABLE KEYS */;
 UNLOCK TABLES;
 

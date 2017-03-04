@@ -251,6 +251,11 @@ func TestDmTreeNilValue(t *testing.T) {
 		t.Errorf("unexpected found")
 	}
 
+	_, ok = df.Find("")
+	if ok {
+		t.Errorf("unexpected found")
+	}
+
 	_, ok = dt.Find("static.qq.com.")
 	if ok {
 		t.Errorf("unexpected found")

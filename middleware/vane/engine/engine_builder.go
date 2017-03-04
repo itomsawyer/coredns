@@ -194,7 +194,15 @@ func (b *EngineBuilder) BuildNetLink(e *Engine) error {
 
 func (b *EngineBuilder) BuildDomainView(e *Engine) error {
 	for _, v := range b.DomainView {
-		err := e.AddDomain(v.DomainId, v.Domain, v.DomainPoolId, v.Domain)
+		d := Domain{
+			ID:       v.DomainId,
+			Domain:   v.Domain,
+			DmPoolID: v.DomainPoolId,
+			DmPool:   v.PoolName,
+			Monitor:  v.DomainMonitor,
+		}
+
+		err := e.AddDomain(d)
 		if err != nil {
 			b.Logger.Error("AddDomain %v failed, %s", v, err)
 			return err

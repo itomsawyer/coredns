@@ -30,7 +30,11 @@ func (t *DmTree) Find(domain string) (interface{}, bool) {
 	}
 
 	if len(domain) == 0 {
-		return t.Value, true
+		if t.Value != nil {
+			return t.Value, true
+		}
+
+		return nil, false
 	}
 
 	tokens := strings.Split(domain, ".")

@@ -143,6 +143,7 @@ CREATE TABLE `domain_pool` (
   `info` varchar(255) NOT NULL DEFAULT '',
   `enable` tinyint(1) NOT NULL DEFAULT '1',
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0',
+  `domain_monitor` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
 ) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='serve domains set';
@@ -154,7 +155,7 @@ CREATE TABLE `domain_pool` (
 
 LOCK TABLES `domain_pool` WRITE;
 /*!40000 ALTER TABLE `domain_pool` DISABLE KEYS */;
-INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured',1,0);
+INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured',1,0,0);
 /*!40000 ALTER TABLE `domain_pool` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -1031,4 +1032,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-03  2:12:38
+-- Dump completed on 2017-03-04 11:11:51
