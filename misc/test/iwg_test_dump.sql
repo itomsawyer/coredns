@@ -115,7 +115,7 @@ CREATE TABLE `domain` (
   `domain` varchar(255) NOT NULL,
   `domain_pool_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
-  UNIQUE KEY `domain` (`domain`,`domain_pool_id`),
+  UNIQUE KEY `domain` (`domain`),
   KEY `domain_pool_id` (`domain_pool_id`),
   CONSTRAINT `domain_ibfk_1` FOREIGN KEY (`domain_pool_id`) REFERENCES `domain_pool` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8 COMMENT='serve domains';
@@ -156,7 +156,7 @@ CREATE TABLE `domain_pool` (
 
 LOCK TABLES `domain_pool` WRITE;
 /*!40000 ALTER TABLE `domain_pool` DISABLE KEYS */;
-INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured',1,0,0),(2,'chilian','domains prefer chilian',1,0,0),(3,'unicom','domains prefer cu',1,0,0);
+INSERT INTO `domain_pool` VALUES (1,'global','Base domain pool for all of domains which are not specifically configured',1,0,0),(2,'chilian','domains prefer chilian',1,0,1),(3,'unicom','domains prefer cu',1,0,0);
 /*!40000 ALTER TABLE `domain_pool` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -172,7 +172,8 @@ SET character_set_client = utf8;
  1 AS `domain_id`,
  1 AS `domain`,
  1 AS `domain_pool_id`,
- 1 AS `pool_name`*/;
+ 1 AS `pool_name`,
+ 1 AS `domain_monitor`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -238,16 +239,24 @@ CREATE TABLE `filter` (
   `src_ip_end` varchar(40) DEFAULT NULL,
   `clientset_id` int(11) DEFAULT NULL,
   `domain_id` int(11) DEFAULT NULL,
-  `dst_ip` varchar(40) DEFAULT NULL,
+  `domain_pool_id` int(11) DEFAULT NULL,
+  `dst_ip_start` varchar(40) DEFAULT NULL,
+  `dst_ip_end` varchar(40) DEFAULT NULL,
+  `netlink_id` int(11) DEFAULT NULL,
+  `target_ip` varchar(40) DEFAULT NULL,
   `outlink_id` int(11) DEFAULT NULL,
   `enable` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
   KEY `clientset_id` (`clientset_id`),
+  KEY `netlink_id` (`netlink_id`),
   KEY `domain_id` (`domain_id`),
+  KEY `domain_pool_id` (`domain_pool_id`),
   KEY `outlink_id` (`outlink_id`),
   CONSTRAINT `filter_ibfk_1` FOREIGN KEY (`clientset_id`) REFERENCES `clientset` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `filter_ibfk_2` FOREIGN KEY (`domain_id`) REFERENCES `domain` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `filter_ibfk_3` FOREIGN KEY (`outlink_id`) REFERENCES `outlink` (`id`) ON DELETE CASCADE
+  CONSTRAINT `filter_ibfk_2` FOREIGN KEY (`netlink_id`) REFERENCES `netlink` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `filter_ibfk_3` FOREIGN KEY (`domain_id`) REFERENCES `domain` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `filter_ibfk_4` FOREIGN KEY (`domain_pool_id`) REFERENCES `domain_pool` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `filter_ibfk_5` FOREIGN KEY (`outlink_id`) REFERENCES `outlink` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='custom route strategy like iptables';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
@@ -275,10 +284,20 @@ SET character_set_client = utf8;
  1 AS `src_ip_end`,
  1 AS `src_ip_end_int`,
  1 AS `clientset_id`,
+ 1 AS `clientset_name`,
  1 AS `domain_id`,
- 1 AS `dst_ip`,
- 1 AS `outlink_id`,
  1 AS `domain`,
+ 1 AS `domain_pool_id`,
+ 1 AS `domain_pool_name`,
+ 1 AS `dst_ip_start`,
+ 1 AS `dst_ip_start_int`,
+ 1 AS `dst_ip_end`,
+ 1 AS `dst_ip_end_int`,
+ 1 AS `netlink_id`,
+ 1 AS `netlink_name`,
+ 1 AS `target_ip`,
+ 1 AS `target_ip_int`,
+ 1 AS `outlink_id`,
  1 AS `outlink_name`,
  1 AS `outlink_addr`*/;
 SET character_set_client = @saved_cs_client;
@@ -542,7 +561,7 @@ DROP TABLE IF EXISTS `outlink`;
 CREATE TABLE `outlink` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(127) NOT NULL,
-  `addr` varchar(40) NOT NULL,
+  `addr` varchar(255) NOT NULL,
   `typ` varchar(32) NOT NULL DEFAULT 'normal',
   `enable` tinyint(1) NOT NULL DEFAULT '1',
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'if other than zero, outlink is unavailable, each bit indicate different reason',
@@ -906,7 +925,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `domain_view` AS select `domain`.`id` AS `domain_id`,`domain`.`domain` AS `domain`,`domain`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `pool_name` from (`domain` join `domain_pool` on((`domain`.`domain_pool_id` = `domain_pool`.`id`))) where ((`domain_pool`.`enable` = 1) and (`domain_pool`.`unavailable` = 0)) */;
+/*!50001 VIEW `domain_view` AS select `domain`.`id` AS `domain_id`,`domain`.`domain` AS `domain`,`domain`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `pool_name`,`domain_pool`.`domain_monitor` AS `domain_monitor` from (`domain` join `domain_pool` on((`domain`.`domain_pool_id` = `domain_pool`.`id`))) where ((`domain_pool`.`enable` = 1) and (`domain_pool`.`unavailable` = 0)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -942,7 +961,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `filter_view` AS select `filter`.`id` AS `id`,`filter`.`src_ip_start` AS `src_ip_start`,inet_aton(`filter`.`src_ip_start`) AS `src_ip_start_int`,`filter`.`src_ip_end` AS `src_ip_end`,inet_aton(`filter`.`src_ip_end`) AS `src_ip_end_int`,`filter`.`clientset_id` AS `clientset_id`,`filter`.`domain_id` AS `domain_id`,`filter`.`dst_ip` AS `dst_ip`,`filter`.`outlink_id` AS `outlink_id`,`domain`.`domain` AS `domain`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr` from (((`domain` join `filter`) join `outlink`) join `clientset`) where ((`filter`.`clientset_id` = `clientset`.`id`) and (`filter`.`outlink_id` = `outlink`.`id`) and (`filter`.`domain_id` = `domain`.`id`) and (`filter`.`enable` = 1)) */;
+/*!50001 VIEW `filter_view` AS select `filter`.`id` AS `id`,`filter`.`src_ip_start` AS `src_ip_start`,inet_aton(`filter`.`src_ip_start`) AS `src_ip_start_int`,`filter`.`src_ip_end` AS `src_ip_end`,inet_aton(`filter`.`src_ip_end`) AS `src_ip_end_int`,`filter`.`clientset_id` AS `clientset_id`,`clientset`.`name` AS `clientset_name`,`filter`.`domain_id` AS `domain_id`,`domain`.`domain` AS `domain`,`filter`.`domain_pool_id` AS `domain_pool_id`,`domain_pool`.`name` AS `domain_pool_name`,`filter`.`dst_ip_start` AS `dst_ip_start`,inet_aton(`filter`.`dst_ip_start`) AS `dst_ip_start_int`,`filter`.`dst_ip_end` AS `dst_ip_end`,inet_aton(`filter`.`dst_ip_end`) AS `dst_ip_end_int`,`filter`.`netlink_id` AS `netlink_id`,concat_ws(':',`netlink`.`isp`,`netlink`.`region`) AS `netlink_name`,`filter`.`target_ip` AS `target_ip`,inet_aton(`filter`.`target_ip`) AS `target_ip_int`,`filter`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr` from (((((`filter` join `domain`) join `domain_pool`) join `clientset`) join `netlink`) join `outlink`) where ((`filter`.`netlink_id` = `netlink`.`id`) and (`filter`.`clientset_id` = `clientset`.`id`) and (`filter`.`outlink_id` = `outlink`.`id`) and (`filter`.`domain_pool_id` = `domain_pool`.`id`) and (`filter`.`domain_id` = `domain`.`id`) and (`filter`.`enable` = 1)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1046,4 +1065,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-03 15:50:57
+-- Dump completed on 2017-03-05 15:04:13

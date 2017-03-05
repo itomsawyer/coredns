@@ -15,6 +15,7 @@ drop view if exists filter_view;
 drop table if exists viewer;
 drop table if exists filter;
 drop table if exists ipnet;
+drop table if exists ipnet_wl;
 drop table if exists clientset;
 drop table if exists domainlink;
 drop table if exists domain;
@@ -22,6 +23,7 @@ drop table if exists domain_pool;
 drop table if exists route;
 drop table if exists routeset;
 drop table if exists iptable;
+drop table if exists iptable_wl;
 drop table if exists netlink;
 drop table if exists netlinkset;
 drop table if exists policy_detail;
@@ -92,7 +94,7 @@ foreign key(domain_pool_id) references domain_pool(id) on delete cascade
 create table outlink (
 id int not null auto_increment,
 name varchar(127) not null,
-addr varchar(40) not null,
+addr varchar(255) not null,
 typ varchar(32) not null default "normal",
 enable bool not null default true,
 unavailable smallint unsigned not null default 0 comment "if other than zero, outlink is unavailable, each bit indicate different reason",
@@ -252,15 +254,21 @@ foreign key(policy_id) references policy(id) on delete restrict
 create table filter(
 id int not null auto_increment,
 src_ip_start varchar(40),
-src_ip_end varchar(40),
+src_ip_end   varchar(40),
 clientset_id int,
-domain_id int,
-dst_ip varchar(40),
-outlink_id int,
+domain_id    int,
+domain_pool_id int,
+dst_ip_start varchar(40),
+dst_ip_end   varchar(40),
+netlink_id   int,
+target_ip    varchar(40),
+outlink_id   int,
 enable bool not null default true,
 primary key(id),
 foreign key(clientset_id) references clientset(id) on delete cascade,
+foreign key(netlink_id) references netlink(id) on delete cascade,
 foreign key(domain_id) references domain(id) on delete cascade,
+foreign key(domain_pool_id) references domain_pool(id) on delete cascade,
 foreign key(outlink_id) references outlink(id) on delete cascade
 )DEFAULT CHARSET=utf8 comment "custom route strategy like iptables";
 
@@ -272,14 +280,24 @@ inet_aton(src_ip_start) as src_ip_start_int,
 src_ip_end ,
 inet_aton(src_ip_end) as src_ip_end_int,
 clientset_id ,
+clientset.name as clientset_name, 
 domain_id ,
-dst_ip ,
-outlink_id ,
 domain.domain,
+filter.domain_pool_id, 
+domain_pool.name as domain_pool_name,
+dst_ip_start,
+inet_aton(dst_ip_start) as dst_ip_start_int,
+dst_ip_end,
+inet_aton(dst_ip_end) as dst_ip_end_int,
+netlink_id,
+CONCAT_WS(':', netlink.isp , netlink.region) as netlink_name,
+target_ip,
+inet_aton(target_ip) as target_ip_int,
+outlink_id ,
 outlink.name as outlink_name,
 outlink.addr as outlink_addr
-from domain, filter, outlink, clientset
-where  filter.clientset_id = clientset.id and filter.outlink_id = outlink.id and filter.domain_id = domain.id and filter.enable = true;
+from filter, domain, domain_pool, clientset, netlink, outlink
+where  filter.netlink_id = netlink.id and  filter.clientset_id = clientset.id and filter.outlink_id = outlink.id and  filter.domain_pool_id = domain_pool.id and filter.domain_id = domain.id and filter.enable = true;
 
 create ALGORITHM = MERGE view clientset_view as
 select ipnet.id as ipnet_id, ip_start, inet_aton(ip_start) as ip_start_int, ip_end, inet_aton(ip_end) as ip_end_int, ipnet, mask, clientset_id, name as clientset_name from ipnet join clientset on clientset.id = ipnet.clientset_id;
@@ -289,7 +307,13 @@ select ipnet_wl.id as ipnet_wl_id, ip_start, inet_aton(ip_start) as ip_start_int
 
 
 create ALGORITHM = MERGE view domain_view as
-select domain.id as domain_id, domain, domain_pool_id, domain_pool.name as pool_name from domain join domain_pool on domain.domain_pool_id= domain_pool.id
+select
+domain.id as domain_id,
+domain,
+domain_pool_id,
+domain_pool.name as pool_name,
+domain_pool.domain_monitor
+from domain join domain_pool on domain.domain_pool_id= domain_pool.id
 where domain_pool.enable = true and domain_pool.unavailable = 0 ;
 
 create ALGORITHM = MERGE view netlink_view as
