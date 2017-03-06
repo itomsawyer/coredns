@@ -26,7 +26,7 @@ func NewUpstreamHost(host string) *UpstreamHost {
 			}
 
 			fails := atomic.LoadInt32(&uh.Fails)
-			if fails >= 2 {
+			if fails >= 3 {
 				return true
 			}
 			return false

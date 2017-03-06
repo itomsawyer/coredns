@@ -103,6 +103,22 @@ func TestRoot(t *testing.T) {
 	}
 }
 
+func TestEmpty(t *testing.T) {
+	nt := new(NetTree)
+
+	if v := nt.Find(0x01ff, 1); v != nil {
+		t.Errorf("unexpected found")
+	}
+
+	if v := nt.Find(0x01ff, 32); v != nil {
+		t.Errorf("unexpected found")
+	}
+
+	if v := nt.Find(0, 0); v != nil {
+		t.Errorf("unexpected found")
+	}
+}
+
 func TestOverlapByIPNet(t *testing.T) {
 	nt := new(NetTree)
 

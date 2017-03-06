@@ -98,7 +98,11 @@ func (t *NetTree) Find(key uint32, bits int) interface{} {
 		found = cur
 	}
 
-	return found.value
+	if found != nil {
+		return found.value
+	}
+
+	return nil
 }
 
 func (t *NetTree) InsertByIPNet(cidr *net.IPNet, v interface{}, prior int) error {
