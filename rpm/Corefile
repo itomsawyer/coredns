@@ -1,0 +1,26 @@
+.:8053 {
+vane_engine {
+        db root:@tcp(127.0.0.1:3306)/iwg
+    }
+
+    vane {
+        debug
+
+        log {
+            type console
+#filename vane.log
+            level debug
+        }
+
+        upstream_timeout 3s 
+    }
+
+    log stdout
+    errors stdout 
+
+    pprof
+
+#cache 300 .  {
+#        denial  1028  10
+#    }
+}

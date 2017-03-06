@@ -3,7 +3,7 @@ package engine
 import (
 	"net"
 	"strconv"
-	"sync/atomic"
+	//"sync/atomic"
 	"time"
 
 	"github.com/coredns/coredns/middleware/pkg/singleflight"
@@ -59,11 +59,11 @@ func (l *LinkStatus) SetTTL(ttl time.Duration) {
 	}
 	l.TTL = ttl
 
-	ls.stored = time.Now().UTC()
+	l.stored = time.Now().UTC()
 }
 
 func (l *LinkStatus) MarkNotify() {
-	return l.notified = true
+	l.notified = true
 }
 
 func (l *LinkStatus) NeedNotify() bool {
@@ -98,7 +98,7 @@ func (m *LinkManager) GetLink(dst net.IP, outLinkID int) (*LinkStatus, bool) {
 		return nil, false
 	}
 
-	if left*2 < ls.TTL && ls.NeedNotify(){
+	if left*2 < ls.TTL && ls.NeedNotify() {
 		err := m.registerLink(key, ls)
 		if err == nil {
 			ls.MarkNotify()
