@@ -22,11 +22,46 @@ func TestSetupVane(t *testing.T) {
 			"perfect",
 			false,
 		},
+
+		{
+			`vane_engine { 
+				db  root:@localhost/igw
+				lm  {
+					cache_cap  1000
+					unknown_ttl 1s
+					enable true
+				}
+			}`,
+			"perfect",
+			false,
+		},
+
 		{
 			`vane_engine {
 				db 
 			}`,
 			"miss db args",
+			true,
+		},
+		{
+			`vane_engine { 
+				db  root:@localhost/igw
+				lm  
+			}`,
+			"missing lm block",
+			true,
+		},
+
+		{
+			`vane_engine { 
+				db  root:@localhost/igw
+				lm  {
+					cache_cap  1
+					unknown_ttl -1s
+					enable true
+				}
+			}`,
+			"unknown_ttl too small",
 			true,
 		},
 	}

@@ -16,6 +16,7 @@ type VaneEngine struct {
 	DBHost     string
 	Logger     *logs.BeeLogger
 	LogConfigs []*LogConfig
+	LMConfig   *LinkManagerConfig
 }
 
 func (v VaneEngine) Engine() *Engine {
@@ -45,6 +46,7 @@ func (v *VaneEngine) InitLogger() error {
 }
 
 func (v *VaneEngine) Reload() error {
+	var err error
 	builder := &EngineBuilder{DBName: v.DBName, Logger: v.Logger}
 	if err := builder.Load(); err != nil {
 		return err
@@ -53,6 +55,15 @@ func (v *VaneEngine) Reload() error {
 	e := new(Engine)
 	if err := builder.Build(e); err != nil {
 		return err
+	}
+
+	if v.LMConfig != nil && v.LMConfig.Enable {
+		e.LinkManager, err = NewLinkManager(v.LMConfig.Cap)
+		if err != nil {
+			return err
+		}
+
+		e.LinkManager.LinkUnknownTTL = v.LMConfig.LinkUnknownTTL
 	}
 
 	v.E = e

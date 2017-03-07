@@ -19,6 +19,10 @@ type SrcView struct {
 	PolicyName     string `orm:"size(128)"`
 }
 
+func (t *SrcView) TableName() string {
+	return "src_view"
+}
+
 func init() {
 	orm.RegisterModel(new(SrcView))
 }

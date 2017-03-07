@@ -93,7 +93,7 @@ func ParseLogConfig(c *caddy.Controller) (*LogConfig, error) {
 	}
 
 	if c.Val() != "{" {
-		return nil, c.ArgErr()
+		return nil, c.SyntaxErr("expect {")
 	}
 
 	//Config block nest anoter block (log block)

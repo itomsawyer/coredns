@@ -15,21 +15,7 @@ var (
 	DefaultDomainPoolID = 1
 	DefaultDomainPool   = Domain{ID: 0, Domain: ".", DmPoolID: 1, DmPool: "default", Monitor: false}
 	DefaultNetLinkID    = 1
-)
 
-/*
-type Enginer interface {
-	GetClientSetID(ip net.IP) (int, error)
-	GetDomainPoolID(domain string) (int, error)
-	GetNetLinkID(ip net.IP) (int, error)
-	GetRouteSetID(clientset, dmpool int) (int, error)
-	GetNetLinkSetID(netlink, dmpool int) (int, error)
-	FilterTarget(netlinkset int)
-	SelectLDNS(clientset, dmpool int) ([]*proxy.UpstreamHost, error)
-}
-*/
-
-var (
 	ErrDuplicateUpstream = errors.New("Duplicate upstream (policy)")
 )
 
@@ -45,6 +31,8 @@ type Engine struct {
 	DstView // <dmpoolid, netlintid> => netlinksetid
 
 	RouteMap // <routeid, netlinksetid> => Route
+
+	LinkManager *LinkManager
 }
 
 func (e *Engine) GetClientSetID(ip net.IP) (clientset_id int) {

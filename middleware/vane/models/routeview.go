@@ -23,7 +23,7 @@ type RouteView struct {
 }
 
 func (t *RouteView) TableName() string {
-	return "base_route_view"
+	return "route_view"
 }
 
 func init() {

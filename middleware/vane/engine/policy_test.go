@@ -3,15 +3,14 @@ package engine
 import (
 	"sort"
 	"testing"
-	"time"
 
 	"github.com/coredns/coredns/middleware/proxy"
 )
 
 func TestSimplePolicy(t *testing.T) {
-	a := proxy.NewUpstreamHost("1.1.1.1", 1*time.Second)
-	b := proxy.NewUpstreamHost("1.1.1.2", 1*time.Second)
-	c := proxy.NewUpstreamHost("1.1.1.3", 1*time.Second)
+	a := proxy.NewUpstreamHost("1.1.1.1")
+	b := proxy.NewUpstreamHost("1.1.1.2")
+	c := proxy.NewUpstreamHost("1.1.1.3")
 
 	hp := HostPool{}
 

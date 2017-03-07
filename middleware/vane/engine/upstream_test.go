@@ -2,7 +2,6 @@ package engine
 
 import (
 	"testing"
-	"time"
 
 	"github.com/coredns/coredns/middleware/proxy"
 )
@@ -10,9 +9,9 @@ import (
 func TestAddUpstream(t *testing.T) {
 	upstream := NewUpstream("test")
 
-	a := proxy.NewUpstreamHost("1.1.1.1", 1*time.Second)
-	b := proxy.NewUpstreamHost("1.1.1.2", 1*time.Second)
-	c := proxy.NewUpstreamHost("1.1.1.3", 1*time.Second)
+	a := proxy.NewUpstreamHost("1.1.1.1")
+	b := proxy.NewUpstreamHost("1.1.1.2")
+	c := proxy.NewUpstreamHost("1.1.1.3")
 
 	upstream.AddHost(b, 2)
 	upstream.AddHost(c, 3)
