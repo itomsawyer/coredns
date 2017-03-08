@@ -2,7 +2,6 @@
 package cache
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -102,8 +101,6 @@ func (c *ResponseWriter) set(m *dns.Msg, key string, mt response.Type, duration 
 		log.Printf("[ERROR] Caching called with empty cache key")
 		return
 	}
-
-	fmt.Println("Set cache with key", key)
 
 	switch mt {
 	case response.NoError, response.Delegation:

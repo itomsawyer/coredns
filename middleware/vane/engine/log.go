@@ -34,12 +34,26 @@ func NewLogConfig() *LogConfig {
 }
 
 func CreateLogger(logConfigs []*LogConfig) (*logs.BeeLogger, error) {
+	noConsole := true
 	beeLogger := logs.NewLogger()
+
+	if len(logConfigs) == 0 {
+		beeLogger.SetLevel(logs.LevelCritical)
+		beeLogger.DelLogger(logs.AdapterConsole)
+		return beeLogger, nil
+	}
 
 	for _, lc := range logConfigs {
 		if err := lc.ApplyTo(beeLogger); err != nil {
 			return nil, err
 		}
+		if lc.adapter == logs.AdapterConsole {
+			noConsole = false
+		}
+	}
+
+	if noConsole {
+		beeLogger.DelLogger(logs.AdapterConsole)
 	}
 
 	return beeLogger, nil

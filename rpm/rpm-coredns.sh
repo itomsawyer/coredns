@@ -40,7 +40,7 @@ if ! [[ $? == 0 ]] ; then
 fi
 
 echo "Fetch all rpm to local dir"
-find /root/rpmbuild/ -name *${version}*.rpm -print0 | xargs -0 -n1 -i%  mv % .
+find /root/rpmbuild/ -name "*coredns*${version}*.rpm" -print0 | xargs -0 -n1 -i%  mv % .
 
 echo "Done"
 

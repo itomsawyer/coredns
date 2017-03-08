@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"strconv"
 	"time"
 
@@ -22,12 +21,10 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	tag := "0"
 	if engine, ok := v.(*vane.Engine); ok && engine != nil {
 		cip := state.GetRemoteAddr()
-		fmt.Println(cip)
 		if cip != nil {
 			cid := engine.GetClientSetID(cip)
 			tag = strconv.Itoa(cid)
 			ctx = context.WithValue(ctx, "clientset_id", cid)
-			fmt.Println("find clientset_id in cache handler:", tag)
 		}
 	}
 
