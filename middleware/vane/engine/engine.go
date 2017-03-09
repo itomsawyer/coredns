@@ -313,3 +313,9 @@ func (e *Engine) AddRoute(route Route) {
 
 	e.RouteMap.AddRoute(route)
 }
+
+func (e *Engine) Stop() {
+	if e.LinkManager != nil {
+		e.LinkManager.Stop()
+	}
+}

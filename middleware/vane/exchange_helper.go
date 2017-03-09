@@ -44,7 +44,7 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 		atomic.AddInt64(&uh.Conns, -1)
 
 		if backendErr != nil {
-			uh.Fail()
+			//uh.Fail()
 			return nil, dns.RcodeServerFailure
 		}
 
@@ -74,7 +74,7 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 				case errChan <- backendErr:
 				case <-done:
 				}
-				uh.Fail()
+				//uh.Fail()
 			}
 
 			wg.Done()

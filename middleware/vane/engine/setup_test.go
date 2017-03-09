@@ -19,7 +19,7 @@ func TestSetupVane(t *testing.T) {
 			`vane_engine { 
 				db  root:@localhost/igw
 			}`,
-			"perfect",
+			"ok",
 			false,
 		},
 
@@ -30,9 +30,14 @@ func TestSetupVane(t *testing.T) {
 					cache_cap  1000
 					unknown_ttl 1s
 					enable true
+					read_hosts 127.0.0.1
+					send_hosts 127.0.0.1
+					send_topic send
+					read_topic read
+					read_channel read
 				}
 			}`,
-			"perfect",
+			"ok with lm",
 			false,
 		},
 
@@ -59,9 +64,47 @@ func TestSetupVane(t *testing.T) {
 					cache_cap  1
 					unknown_ttl -1s
 					enable true
+					read_hosts 127.0.0.1
+					send_hosts 127.0.0.1
+					send_topic send
+					read_topic read
+					read_channel read
 				}
 			}`,
 			"unknown_ttl too small",
+			true,
+		},
+		{
+			`vane_engine { 
+				db  root:@localhost/igw
+				lm  {
+					cache_cap  1
+					unknown_ttl 2s
+					enable true
+					read_hosts 127.0.0.1
+					send_topic send
+					read_topic read
+					read_channel read
+				}
+			}`,
+			"send_hosts must be set ",
+			true,
+		},
+
+		{
+			`vane_engine { 
+				db  root:@localhost/igw
+				lm  {
+					cache_cap  1
+					unknown_ttl 2s
+					enable true
+					read_hosts 127.0.0.1
+					send_hosts 127.0.0.1
+					read_topic read
+					read_channel read
+				}
+			}`,
+			"send_topic must be set",
 			true,
 		},
 	}
@@ -83,7 +126,6 @@ func TestSetupVane(t *testing.T) {
 				return
 			}
 		}
-
-		t.Log("vane:", vane)
+		t.Log(vane)
 	}
 }

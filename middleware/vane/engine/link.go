@@ -1,15 +1,17 @@
 package engine
 
 import (
-	"net"
+	"fmt"
 	"strconv"
 	//"sync/atomic"
+	"encoding/json"
 	"time"
 
 	"github.com/coredns/coredns/middleware/pkg/singleflight"
 
 	"github.com/hashicorp/golang-lru"
 	"github.com/mholt/caddy"
+	"supermq"
 )
 
 const (
@@ -22,7 +24,14 @@ type LinkManager struct {
 	*lru.Cache
 	group *singleflight.Group
 
+	LinkStatusTTL  time.Duration
 	LinkUnknownTTL time.Duration
+
+	sendHosts []string
+	readHosts []string
+	SendTopic string
+	reader    *supermq.Tconsumer
+	sender    *supermq.MProducer
 }
 
 func NewLinkManager(cap int) (*LinkManager, error) {
@@ -38,93 +47,120 @@ func NewLinkManager(cap int) (*LinkManager, error) {
 	return &LinkManager{
 		Cache:          c,
 		group:          new(singleflight.Group),
-		LinkUnknownTTL: 3 * time.Second,
+		LinkUnknownTTL: 10 * time.Second,
+		LinkStatusTTL:  2 * time.Minute,
 	}, nil
 }
 
-func (m *LinkManager) Launch() {
+func (m *LinkManager) handlerFunc() supermq.Handle {
+	return func(msg *supermq.Message) error {
+		ls := &LinkStatus{}
+		err := json.Unmarshal(msg.Body, ls)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
 
-}
-
-type LinkStatus struct {
-	Dst       net.IP
-	OutLinkID int
-	Status    int
-	TTL       time.Duration
-	stored    time.Time
-	notified  bool
-}
-
-func (l *LinkStatus) Key() string {
-	if l.Dst == nil {
-		return "nil/" + strconv.Itoa(l.OutLinkID)
-	}
-
-	return l.Dst.String() + "/" + strconv.Itoa(l.OutLinkID)
-}
-
-func (l *LinkStatus) SetTTL(ttl time.Duration, now ...time.Time) {
-	if ttl < 0 {
-		ttl = 0
-	}
-	l.TTL = ttl
-
-	if len(now) == 0 {
-		l.stored = time.Now().UTC()
-	} else {
-		l.stored = now[0].UTC()
+		fmt.Println("recive linkstatus:", ls)
+		ls.SetTTL(m.LinkStatusTTL)
+		m.Cache.Add(ls.Dst2LNK, ls)
+		return nil
 	}
 }
 
-func (l *LinkStatus) MarkNotify() {
-	l.notified = true
-}
-
-func (l *LinkStatus) IsNofitied() bool {
-	return l.notified
-}
-
-func (l *LinkStatus) IsExpire(now time.Time) (left time.Duration, ok bool) {
-	left = l.TTL - now.UTC().Sub(l.stored)
-	return left, left < 0
-}
-
-func (m *LinkManager) GetLink(dst net.IP, outLinkID int) (*LinkStatus, bool) {
-	if dst == nil {
-		return nil, false
+func (m *LinkManager) RegisterSender(hosts []string, topic string) error {
+	p := supermq.NewMProducer()
+	for _, host := range hosts {
+		err := p.AddRx(host)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
 	}
 
-	ls := &LinkStatus{Dst: dst, OutLinkID: outLinkID, Status: LinkStatusUnknown}
-	key := ls.Key()
+	m.SendTopic = topic
+	m.sendHosts = hosts
+	m.sender = p
+	return nil
+}
 
-	v, ok := m.Cache.Get(key)
+func (m *LinkManager) RegisterReader(hosts []string, topic, channel string) error {
+	c, err := supermq.NewTconsumer(topic, channel, m.handlerFunc())
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	if err := c.ConnectToNSQLookupds(hosts); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	m.readHosts = hosts
+	m.reader = c
+	return nil
+}
+
+func (m *LinkManager) addTaskAndNotify(ls *LinkStatus) error {
+	ls.SetTTL(m.LinkUnknownTTL)
+	ls.Status = LinkStatusUnknown
+	m.Cache.Add(ls.Dst2LNK, ls)
+
+	err := m.registerLink(ls)
+	if err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func (m *LinkManager) GetLink(dst, outlink string) (*LinkStatus, bool) {
+	ls := NewLinkStatus(dst, outlink, LinkStatusUnknown)
+
+	v, ok := m.Cache.Get(ls.Dst2LNK)
 	if !ok {
-		ls.SetTTL(m.LinkUnknownTTL)
-		m.Cache.Add(key, ls)
-		m.registerLink(key, ls)
+		m.addTaskAndNotify(ls)
 		return nil, false
 	}
 
 	ls = v.(*LinkStatus)
 	left, ok := ls.IsExpire(time.Now())
 	if ok {
-		m.Cache.Remove(key)
+		fmt.Println("linkstatus expired")
+		m.Cache.Remove(ls.Dst2LNK)
+
+		m.addTaskAndNotify(ls)
 		return nil, false
 	}
 
-	if left*2 < ls.TTL && ls.IsNofitied() {
-		err := m.registerLink(key, ls)
+	if left*2 < ls.TTL && ls.notified != true {
+		fmt.Println("linkstatus almost expired")
+		err := m.registerLink(ls)
 		if err == nil {
-			ls.MarkNotify()
+			ls.notified = true
 		}
 	}
 
 	return ls, true
 }
 
-func (m *LinkManager) registerLink(key string, ls *LinkStatus) error {
-	_, err := m.group.Do(key, func() (interface{}, error) {
-		//TODO register link status to backend
+func (m *LinkManager) registerLink(ls *LinkStatus) error {
+	if m.sender == nil {
+		return nil
+	}
+
+	_, err := m.group.Do(ls.Dst2LNK.DstIP+":"+ls.Dst2LNK.OutLink, func() (interface{}, error) {
+		data, err := json.Marshal(ls)
+		if err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
+
+		if err := m.sender.MultiPublish(m.SendTopic, [][]byte{data}); err != nil {
+			fmt.Println(err)
+			return nil, err
+		}
 
 		return nil, nil
 	})
@@ -132,17 +168,53 @@ func (m *LinkManager) registerLink(key string, ls *LinkStatus) error {
 	return err
 }
 
+func (m *LinkManager) Stop() {
+	if m.sender != nil {
+		m.sender.Stop()
+	}
+
+	if m.reader != nil {
+		m.reader.Stop()
+	}
+}
+
 type LinkManagerConfig struct {
 	Enable         bool
 	Cap            int
+	SendTopic      string
+	ReadTopic      string
+	ReadChannel    string
+	sendHosts      []string
+	readHosts      []string
+	LinkStatusTTL  time.Duration
 	LinkUnknownTTL time.Duration
+}
+
+func (c *LinkManagerConfig) CreateLinkManager() (*LinkManager, error) {
+	lm, err := NewLinkManager(c.Cap)
+	if err != nil {
+		return nil, err
+	}
+
+	lm.LinkUnknownTTL = c.LinkUnknownTTL
+	lm.LinkStatusTTL = c.LinkStatusTTL
+	if err := lm.RegisterSender(c.sendHosts, c.SendTopic); err != nil {
+		return nil, err
+	}
+
+	if err := lm.RegisterReader(c.readHosts, c.ReadTopic, c.ReadChannel); err != nil {
+		return nil, err
+	}
+
+	return lm, nil
 }
 
 func NewLinkManagerConfig() *LinkManagerConfig {
 	return &LinkManagerConfig{
 		Enable:         true,
 		Cap:            100,
-		LinkUnknownTTL: 3 * time.Second,
+		LinkUnknownTTL: 10 * time.Second,
+		LinkStatusTTL:  2 * time.Minute,
 	}
 }
 
@@ -207,9 +279,67 @@ func ParseLinkManagerConfig(c *caddy.Controller) (*LinkManagerConfig, error) {
 				return nil, c.SyntaxErr("unknown_ttl should be greater than 0")
 			}
 
+		case "link_ttl":
+			args := c.RemainingArgs()
+			if len(args) != 1 {
+				return nil, c.ArgErr()
+			}
+			if lmconfig.LinkStatusTTL, err = time.ParseDuration(args[0]); err != nil {
+				return nil, c.SyntaxErr(err.Error())
+			}
+
+			if lmconfig.LinkStatusTTL <= 0 {
+				return nil, c.SyntaxErr("unknown_ttl should be greater than 0")
+			}
+
+		case "send_topic":
+			args := c.RemainingArgs()
+			if len(args) != 1 {
+				return nil, c.ArgErr()
+			}
+			lmconfig.SendTopic = args[0]
+
+		case "read_topic":
+			args := c.RemainingArgs()
+			if len(args) != 1 {
+				return nil, c.ArgErr()
+			}
+			lmconfig.ReadTopic = args[0]
+
+		case "read_channel":
+			args := c.RemainingArgs()
+			if len(args) != 1 {
+				return nil, c.ArgErr()
+			}
+			lmconfig.ReadChannel = args[0]
+
+		case "send_hosts":
+			args := c.RemainingArgs()
+			if len(args) == 0 {
+				return nil, c.ArgErr()
+			}
+
+			lmconfig.sendHosts = args
+
+		case "read_hosts":
+			args := c.RemainingArgs()
+			if len(args) == 0 {
+				return nil, c.ArgErr()
+			}
+
+			lmconfig.readHosts = args
+
 		default:
-			return nil, c.ArgErr()
+			return nil, c.Err("directive " + c.Val() + " is unknown")
 		}
+	}
+
+	if lmconfig.SendTopic == "" || lmconfig.ReadTopic == "" || lmconfig.ReadChannel == "" {
+		return nil, c.Err("send_topic read_topic and read_channel must be set")
+	}
+
+	if len(lmconfig.sendHosts) == 0 || len(lmconfig.readHosts) == 0 {
+		return nil, c.Err("send_hosts and read_hosts  must be set")
 	}
 
 	return lmconfig, nil

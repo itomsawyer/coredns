@@ -19,18 +19,20 @@ func NewUpstreamHost(host string) *UpstreamHost {
 		Fails:       0,
 		FailTimeout: 10 * time.Second,
 		Unhealthy:   false,
+		CheckDown:   nil,
+		/*
+			CheckDown: func(uh *UpstreamHost) bool {
+				if uh.Unhealthy {
+					return true
+				}
 
-		CheckDown: func(uh *UpstreamHost) bool {
-			if uh.Unhealthy {
-				return true
-			}
-
-			fails := atomic.LoadInt32(&uh.Fails)
-			if fails >= 3 {
-				return true
-			}
-			return false
-		},
+				fails := atomic.LoadInt32(&uh.Fails)
+				if fails >= 3 {
+					return true
+				}
+				return false
+			},
+		*/
 		WithoutPathPrefix: "",
 	}
 

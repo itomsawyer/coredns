@@ -46,7 +46,6 @@ func (v *VaneEngine) InitLogger() error {
 }
 
 func (v *VaneEngine) Reload() error {
-	var err error
 	builder := &EngineBuilder{DBName: v.DBName, Logger: v.Logger}
 	if err := builder.Load(); err != nil {
 		return err
@@ -58,14 +57,19 @@ func (v *VaneEngine) Reload() error {
 	}
 
 	if v.LMConfig != nil && v.LMConfig.Enable {
-		e.LinkManager, err = NewLinkManager(v.LMConfig.Cap)
-		if err != nil {
+		if lm, err := v.LMConfig.CreateLinkManager(); err != nil {
 			return err
+		} else {
+			e.LinkManager = lm
 		}
-
-		e.LinkManager.LinkUnknownTTL = v.LMConfig.LinkUnknownTTL
 	}
 
+	old := v.E
 	v.E = e
+
+	if old != nil {
+		go old.Stop()
+	}
+
 	return nil
 }

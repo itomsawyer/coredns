@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"net"
 	"testing"
 	"time"
 
@@ -24,11 +23,11 @@ func TestLinkManagerCreate(t *testing.T) {
 		t.Error(err)
 	}
 
-	if ls, ok := lm.GetLink(net.ParseIP("1.1.1.1"), 1); ok || ls != nil {
+	if ls, ok := lm.GetLink("1.1.1.1", "ot1"); ok || ls != nil {
 		t.Errorf("unexpected found")
 	}
 
-	if ls, ok := lm.GetLink(net.ParseIP("1.1.1.1"), 1); (!ok) || ls == nil {
+	if ls, ok := lm.GetLink("1.1.1.1", "ot1"); (!ok) || ls == nil {
 		t.Errorf("unexpected not found")
 	} else if ls.Status != LinkStatusUnknown {
 		t.Errorf("expected link status %d, get %d", LinkStatusUnknown, ls.Status)
@@ -59,4 +58,26 @@ func TestLinkStatusExpire(t *testing.T) {
 	} else if left != (time.Second * -1) {
 		t.Errorf("expect ttl left %s,  get %s", -1*time.Second, left)
 	}
+}
+
+func TestLinkManagerSend(t *testing.T) {
+	lm, err := NewLinkManager(100)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	if err := lm.RegisterSender([]string{"192.168.30.192:4150"}, "dst2otlnk"); err != nil {
+		t.Error(err)
+		return
+	}
+
+	if err := lm.RegisterReader([]string{"192.168.30.192:4161"}, "dlresult", "channel"); err != nil {
+		t.Error(err)
+		return
+	}
+
+	//for {
+	//	lm.GetLink("1.1.1.1", "ot1")
+	//	time.Sleep(1 * time.Second)
+	//}
 }

@@ -57,7 +57,7 @@ func (h errorHandler) recovery(ctx context.Context, w dns.ResponseWriter, r *dns
 	}
 
 	callers := getCallers(rec)
-	fmt.Printf("recovered from panic %q. Call stack:\n%v", rec, callers)
+	h.Log.Printf("recovered from panic %q. Call stack:\n%v", rec, callers)
 
 	state := request.Request{W: w, Req: r}
 	// Obtain source of panic
