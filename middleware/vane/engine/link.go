@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"fmt"
 	"strconv"
 	//"sync/atomic"
 	"encoding/json"
@@ -9,8 +8,10 @@ import (
 
 	"github.com/coredns/coredns/middleware/pkg/singleflight"
 
+	"github.com/astaxie/beego/logs"
 	"github.com/hashicorp/golang-lru"
 	"github.com/mholt/caddy"
+	"github.com/nsqio/go-nsq"
 	"supermq"
 )
 
@@ -20,9 +21,17 @@ const (
 	LinkStatusDown
 )
 
+var (
+	LogLevelDebug   = nsq.LogLevelDebug
+	LogLevelInfo    = nsq.LogLevelInfo
+	LogLevelWarning = nsq.LogLevelWarning
+	LogLevelError   = nsq.LogLevelError
+)
+
 type LinkManager struct {
 	*lru.Cache
-	group *singleflight.Group
+	group  *singleflight.Group
+	logger *logs.BeeLogger
 
 	LinkStatusTTL  time.Duration
 	LinkUnknownTTL time.Duration
@@ -52,16 +61,29 @@ func NewLinkManager(cap int) (*LinkManager, error) {
 	}, nil
 }
 
+func (m *LinkManager) SetLogger(log *logs.BeeLogger) error {
+	m.logger = log
+
+	// TODO set sender log
+	//if m.sender != nil {
+	//	m.sender
+	//}
+
+	//if m.reader != nil {
+	//	m.reader.SetLogger(log, lg)
+	//}
+	return nil
+}
+
 func (m *LinkManager) handlerFunc() supermq.Handle {
 	return func(msg *supermq.Message) error {
 		ls := &LinkStatus{}
 		err := json.Unmarshal(msg.Body, ls)
 		if err != nil {
-			fmt.Println(err)
 			return nil
 		}
 
-		fmt.Println("recive linkstatus:", ls)
+		m.logger.Debug("lm handler receive msg:%v", ls)
 		ls.SetTTL(m.LinkStatusTTL)
 		m.Cache.Add(ls.Dst2LNK, ls)
 		return nil
@@ -73,7 +95,6 @@ func (m *LinkManager) RegisterSender(hosts []string, topic string) error {
 	for _, host := range hosts {
 		err := p.AddRx(host)
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 	}
@@ -87,12 +108,10 @@ func (m *LinkManager) RegisterSender(hosts []string, topic string) error {
 func (m *LinkManager) RegisterReader(hosts []string, topic, channel string) error {
 	c, err := supermq.NewTconsumer(topic, channel, m.handlerFunc())
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
 	if err := c.ConnectToNSQLookupds(hosts); err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -108,7 +127,6 @@ func (m *LinkManager) addTaskAndNotify(ls *LinkStatus) error {
 
 	err := m.registerLink(ls)
 	if err != nil {
-		fmt.Println(err)
 		return err
 	}
 
@@ -127,7 +145,7 @@ func (m *LinkManager) GetLink(dst, outlink string) (*LinkStatus, bool) {
 	ls = v.(*LinkStatus)
 	left, ok := ls.IsExpire(time.Now())
 	if ok {
-		fmt.Println("linkstatus expired")
+		m.logger.Debug("link %v expired: %s", ls, left)
 		m.Cache.Remove(ls.Dst2LNK)
 
 		m.addTaskAndNotify(ls)
@@ -135,7 +153,7 @@ func (m *LinkManager) GetLink(dst, outlink string) (*LinkStatus, bool) {
 	}
 
 	if left*2 < ls.TTL && ls.notified != true {
-		fmt.Println("linkstatus almost expired")
+		m.logger.Debug("link %v almost expired: %s", ls, left)
 		err := m.registerLink(ls)
 		if err == nil {
 			ls.notified = true
@@ -153,12 +171,12 @@ func (m *LinkManager) registerLink(ls *LinkStatus) error {
 	_, err := m.group.Do(ls.Dst2LNK.DstIP+":"+ls.Dst2LNK.OutLink, func() (interface{}, error) {
 		data, err := json.Marshal(ls)
 		if err != nil {
-			fmt.Println(err)
+			m.logger.Warn("register link status pack error: %s", err)
 			return nil, err
 		}
 
 		if err := m.sender.MultiPublish(m.SendTopic, [][]byte{data}); err != nil {
-			fmt.Println(err)
+			m.logger.Warn("register link status send error: %s", err)
 			return nil, err
 		}
 
@@ -188,6 +206,7 @@ type LinkManagerConfig struct {
 	readHosts      []string
 	LinkStatusTTL  time.Duration
 	LinkUnknownTTL time.Duration
+	LogConfigs     []*LogConfig
 }
 
 func (c *LinkManagerConfig) CreateLinkManager() (*LinkManager, error) {
@@ -204,6 +223,14 @@ func (c *LinkManagerConfig) CreateLinkManager() (*LinkManager, error) {
 
 	if err := lm.RegisterReader(c.readHosts, c.ReadTopic, c.ReadChannel); err != nil {
 		return nil, err
+	}
+
+	if logger, err := CreateLogger(c.LogConfigs); err != nil {
+		return nil, err
+	} else {
+		if err := lm.SetLogger(logger); err != nil {
+			return nil, err
+		}
 	}
 
 	return lm, nil
@@ -329,6 +356,13 @@ func ParseLinkManagerConfig(c *caddy.Controller) (*LinkManagerConfig, error) {
 
 			lmconfig.readHosts = args
 
+		case "log":
+			lc, err := ParseLogConfig(c)
+			if err != nil {
+				return nil, err
+			}
+
+			lmconfig.LogConfigs = append(lmconfig.LogConfigs, lc)
 		default:
 			return nil, c.Err("directive " + c.Val() + " is unknown")
 		}

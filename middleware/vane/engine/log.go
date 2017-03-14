@@ -28,7 +28,7 @@ type LogConfig struct {
 
 func NewLogConfig() *LogConfig {
 	return &LogConfig{
-		adapter: logs.AdapterFile,
+		adapter: logs.AdapterConsole,
 		Level:   logs.LevelInfo,
 	}
 }
@@ -84,7 +84,7 @@ func supportLogType(t string) bool {
 	}
 }
 
-func logLevel(l string) (int, error) {
+func LogLevel(l string) (int, error) {
 	n, ok := supportLevels[l]
 	if !ok {
 		return 0, errors.New("unsupported log level:" + l)
@@ -141,7 +141,7 @@ func ParseLogConfig(c *caddy.Controller) (*LogConfig, error) {
 				return nil, c.ArgErr()
 			}
 
-			n, err := logLevel(args[0])
+			n, err := LogLevel(args[0])
 			if err != nil {
 				return nil, err
 			}
