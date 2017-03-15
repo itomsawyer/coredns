@@ -114,9 +114,7 @@ try_again:
 
 	view, err := e.GetView(clientSetID, domain.DmPoolID)
 	if err != nil {
-		if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
-			domain = engine.DefaultDomainPool
-			v.Logger.Debug("fallback to default domain pool")
+		if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
 			goto try_again
 		}
 
@@ -126,9 +124,7 @@ try_again:
 	v.Logger.Debug("get view %v", view)
 
 	if view.Upstream == nil {
-		if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
-			domain = engine.DefaultDomainPool
-			v.Logger.Debug("fallback to default domain pool")
+		if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
 			goto try_again
 		}
 
@@ -138,9 +134,7 @@ try_again:
 	//Policy is a method class to choose upstreamhost (ldns) from upstream (policy)
 	policy := view.Upstream.GetPolicy()
 	if policy == nil {
-		if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
-			domain = engine.DefaultDomainPool
-			v.Logger.Debug("fallback to default domain pool")
+		if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
 			goto try_again
 		}
 
@@ -152,6 +146,7 @@ try_again:
 	bestrc = dns.RcodeServerFailure
 	replyMsg = nil
 	replys = nil
+
 	for i = 0; i < defaultMaxAttampts; i++ {
 		v.Logger.Debug("try select upstream hosts")
 		// for each time policy choose the next prior upstreamhosts group
@@ -215,22 +210,31 @@ try_again:
 			}
 		}
 
-		for _, rr := range rrset {
-			a := rr.(*dns.A)
-			netLinkID := e.GetNetLinkID(a.A)
-			routes := e.GetRoute(view.RouteSetID, domain.DmPoolID, netLinkID)
-			// If has route, we consider the result to be valid
-			if len(routes) == 0 {
-				continue
-			}
+		if _, _, ok = rollback(clientSetID, domain); ok {
+			for _, rr := range rrset {
+				a := rr.(*dns.A)
+				netLinkID := e.GetNetLinkID(a.A)
+				routes := e.GetRoute(view.RouteSetID, domain.DmPoolID, netLinkID)
+				// If has route, we consider the result to be valid
+				if len(routes) == 0 {
+					continue
+				}
 
-			if domain.Monitor {
-				v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
-			}
+				if domain.Monitor {
+					v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
+				}
 
-			v.Logger.Debug("ip addr has been accepted %s", a.A)
-			a.Hdr.Name = q.Name
-			better = append(better, a)
+				v.Logger.Debug("ip addr has been accepted %s for route", a.A)
+				a.Hdr.Name = q.Name
+				better = append(better, a)
+			}
+		} else {
+			for _, rr := range rrset {
+				a := rr.(*dns.A)
+				a.Hdr.Name = q.Name
+				v.Logger.Debug("ip addr has been accepted %s for last chance", a.A)
+				better = append(better, a)
+			}
 		}
 
 		if len(better) == 0 {
@@ -253,9 +257,7 @@ try_again:
 	// try again the whole precedure with domainPoolID equals to
 	// default domainPoolID which is 1. Or the domainPoolID is already the default, Lookup failed
 
-	if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
-		domain = engine.DefaultDomainPool
-		v.Logger.Debug("fallback to default domain pool")
+	if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
 		goto try_again
 	}
 
@@ -273,4 +275,16 @@ try_again:
 	//we tried our best but still got nothing
 	v.Logger.Error("vane cannot resolve any answer for clientset: %d dmpool: %d", clientSetID, domain.DmPoolID)
 	return dns.RcodeServerFailure, errUnreachable
+}
+
+func rollback(clientSetID int, domain engine.Domain) (int, engine.Domain, bool) {
+	if domain.DmPoolID != engine.DefaultDomainPool.DmPoolID {
+		return clientSetID, engine.DefaultDomainPool, true
+	}
+
+	if clientSetID != engine.DefaultClientSetID {
+		return engine.DefaultClientSetID, domain, true
+	}
+
+	return 0, engine.Domain{}, false
 }

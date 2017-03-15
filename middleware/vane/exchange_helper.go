@@ -26,6 +26,10 @@ func NewExchangeHelper(u *engine.Upstream, hosts []*proxy.UpstreamHost) *Exchang
 	}
 }
 
+// replys are the dns responses from upstream dns server, max length is equal to len(h.Hosts)
+// all of replys will be sorted by retcode to make sure the better reponse always comes first
+// retcode NOERROR PriorTo NXDOMAIN PriorTo NOTIMPLEMENT PriorTo REFUSE PriorTo SERVERFAIL
+// see msgs.Best() for details
 func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) (replys []*dns.Msg, retcode int) {
 	if h.Upstream == nil {
 		return nil, dns.RcodeServerFailure
@@ -43,6 +47,8 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 		reply, backendErr := ex.Exchange(ctx, uh.Name, state)
 		atomic.AddInt64(&uh.Conns, -1)
 
+		//XXX gaoxiang if uh.Fail() is needed? if vane should check upstream ldns
+		//    with gwCheck is working
 		if backendErr != nil {
 			//uh.Fail()
 			return nil, dns.RcodeServerFailure
@@ -74,6 +80,8 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 				case errChan <- backendErr:
 				case <-done:
 				}
+				//XXX gaoxiang if uh.Fail() is needed? if vane should check upstream ldns
+				//    with gwCheck is working
 				//uh.Fail()
 			}
 
