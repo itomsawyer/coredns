@@ -202,7 +202,7 @@ export GOPATH=%{buildroot}/%{gopath}:$(pwd)/vendor:%{gopath}
 
 
 %files
-%doc %{homedir}/logs
+%dir %{homedir}/logs
 %{homedir}/bin/coredns
 %{homedir}/misc/iwg_dump.sql
 %config(noreplace) %{homedir}/conf/Corefile

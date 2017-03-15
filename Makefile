@@ -11,6 +11,7 @@ all: coredns
 # TODO: Add .go file dependencies.
 .PHONY: coredns
 coredns: deps core/zmiddleware.go core/dnsserver/zdirectives.go
+	## go build
 	go build $(BUILD_VERBOSE) -ldflags="-s -w"
 
 .PHONY: docker
@@ -20,6 +21,8 @@ docker: deps
 	docker tag $(DOCKER_IMAGE_NAME):latest $(DOCKER_IMAGE_NAME):$(DOCKER_VERSION)
 
 .PHONY: deps
+	## get go deps
+	go get ${BUILD_VERBOSE}
 
 .PHONY: test
 test: deps

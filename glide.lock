@@ -1,5 +1,5 @@
-hash: e693241165222de386e7d0a3195c9dccf85e636e39049d39f6e391b9976b6c85
-updated: 2017-02-27T21:24:03.416366058+08:00
+hash: 31ee846a6dd2831098ecdceaef271df776ae581fec087a2df6684a33f2a05349
+updated: 2017-03-15T21:36:04.83484136+08:00
 imports:
 - name: cloud.google.com/go
   version: a39e88be64dbe353e94499acdba057066e657aba
@@ -22,7 +22,7 @@ imports:
 - name: github.com/blang/semver
   version: 4a1e882c79dcf4ec00d2e29fac74b9c8938d5052
 - name: github.com/coreos/etcd
-  version: 714e7ec8db7f8398880197be10771fe89c480ee5
+  version: 21fdcc6443f3267111051240f0eca839acc96a39
   subpackages:
   - client
   - pkg/pathutil
@@ -132,6 +132,12 @@ imports:
   - caddyfile
 - name: github.com/miekg/dns
   version: eda6b320244f0700772bb765282381d17495e7d3
+- name: github.com/mreiferson/go-snappystream
+  version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
+  subpackages:
+  - snappy-go
+- name: github.com/nsqio/go-nsq
+  version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
 - name: github.com/opencontainers/go-digest
   version: aa2ec055abd10d26d539eb630a92241b781ce4bc
 - name: github.com/opentracing/opentracing-go
@@ -140,7 +146,7 @@ imports:
   - ext
   - log
 - name: github.com/openzipkin/zipkin-go-opentracing
-  version: 594640b9ef7e5c994e8d9499359d693c032d738c
+  version: 6022d4d3ed39632fad842942bda1813a9b4f63c8
   subpackages:
   - _thrift/gen-go/scribe
   - _thrift/gen-go/zipkincore
