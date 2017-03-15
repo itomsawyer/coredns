@@ -132,6 +132,7 @@ install -d -p %{buildroot}/%{homedir}
 install -d -p %{buildroot}/%{homedir}/conf
 install -d -p %{buildroot}/%{homedir}/bin
 install -d -p %{buildroot}/%{homedir}/misc
+install -d -p %{buildroot}/%{homedir}/logs
 cp -pav coredns %{buildroot}/%{homedir}/bin
 cp -pav misc/iwg_dump.sql %{buildroot}/%{homedir}/misc
 cp -pav rpm/Corefile %{buildroot}/%{homedir}/conf
@@ -198,7 +199,10 @@ export GOPATH=%{buildroot}/%{gopath}:$(pwd)/vendor:%{gopath}
 #define license tag if not already defined
 %{!?_licensedir:%global license %doc}
 
+
+
 %files
+%doc %{homedir}/logs
 %{homedir}/bin/coredns
 %{homedir}/misc/iwg_dump.sql
 %config(noreplace) %{homedir}/conf/Corefile
