@@ -6,8 +6,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 	ot "github.com/opentracing/opentracing-go"
@@ -17,12 +17,17 @@ import (
 var (
 	errUnreachable     = errors.New("unreachable backend")
 	errInvalidProtocol = errors.New("invalid protocol")
+	errInvalidDomain   = errors.New("invalid path for proxy")
 )
 
 // Proxy represents a middleware instance that can proxy requests to another (DNS) server.
 type Proxy struct {
-	Next      middleware.Handler
-	Upstreams []Upstream
+	Next middleware.Handler
+
+	// Upstreams is a pointer to a slice, so we can update the upstream (used for Google)
+	// midway.
+
+	Upstreams *[]Upstream
 }
 
 // Upstream manages a pool of proxy upstream hosts. Select should return a
@@ -33,9 +38,9 @@ type Upstream interface {
 	// Selects an upstream host to be routed to.
 	Select() *UpstreamHost
 	// Checks if subpdomain is not an ignored.
-	IsAllowedPath(string) bool
-	// Options returns the options set for this upstream
-	Options() Options
+	IsAllowedDomain(string) bool
+	// Exchanger returns the exchanger to be used for this upstream.
+	Exchanger() Exchanger
 }
 
 // UpstreamHostDownFunc can be used to customize how Down behaves.
@@ -47,10 +52,10 @@ type UpstreamHost struct {
 	Name              string // IP address (and port) of this upstream host
 	Fails             int32
 	FailTimeout       time.Duration
+	QueryTimeout      time.Duration
 	Unhealthy         bool
 	CheckDown         UpstreamHostDownFunc
 	WithoutPathPrefix string
-	Exchanger
 }
 
 // Down checks whether the upstream host is down or not.
@@ -71,10 +76,19 @@ var tryDuration = 60 * time.Second
 
 // ServeDNS satisfies the middleware.Handler interface.
 func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
-	var span, child ot.Span
+	var (
+		span, child ot.Span
+	)
+
 	span = ot.SpanFromContext(ctx)
 	state := request.Request{W: w, Req: r}
-	for _, upstream := range p.Upstreams {
+
+	upstream := p.match(state)
+	if upstream == nil {
+		return middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
+	}
+
+	for {
 		start := time.Now()
 
 		// Since Select() should give us "up" hosts, keep retrying
@@ -82,9 +96,7 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		for time.Now().Sub(start) < tryDuration {
 			host := upstream.Select()
 			if host == nil {
-
-				RequestDuration.WithLabelValues(state.Proto(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
-
+				RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
 				return dns.RcodeServerFailure, errUnreachable
 			}
 
@@ -95,7 +107,7 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 			atomic.AddInt64(&host.Conns, 1)
 
-			reply, backendErr := host.Exchange(state)
+			reply, backendErr := upstream.Exchanger().Exchange(ctx, host.Name, state)
 
 			atomic.AddInt64(&host.Conns, -1)
 
@@ -105,11 +117,10 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 			if backendErr == nil {
 				w.WriteMsg(reply)
-
-				RequestDuration.WithLabelValues(state.Proto(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
-
+				RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
 				return 0, nil
 			}
+
 			timeout := host.FailTimeout
 			if timeout == 0 {
 				timeout = 10 * time.Second
@@ -121,11 +132,28 @@ func (p Proxy) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 			}(host, timeout)
 		}
 
-		RequestDuration.WithLabelValues(state.Proto(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
+		RequestDuration.WithLabelValues(state.Proto(), upstream.Exchanger().Protocol(), upstream.From()).Observe(float64(time.Since(start) / time.Millisecond))
 
 		return dns.RcodeServerFailure, errUnreachable
 	}
-	return middleware.NextOrFailure(p.Name(), p.Next, ctx, w, r)
+}
+
+func (p Proxy) match(state request.Request) (u Upstream) {
+	longestMatch := 0
+	for _, upstream := range *p.Upstreams {
+		from := upstream.From()
+
+		if !middleware.Name(from).Matches(state.Name()) || !upstream.IsAllowedDomain(state.Name()) {
+			continue
+		}
+
+		if lf := len(from); lf > longestMatch {
+			longestMatch = lf
+			u = upstream
+		}
+	}
+	return u
+
 }
 
 // Name implements the Handler interface.

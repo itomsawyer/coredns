@@ -8,6 +8,12 @@ import (
 	"github.com/miekg/dns"
 )
 
+func ParseIPNet(ipstart string, mask int) (*net.IPNet, error) {
+	s := fmt.Sprintf("%s/%d", ipstart, mask)
+	_, ipnet, err := net.ParseCIDR(s)
+	return ipnet, err
+}
+
 // ParseHostPortOrFile parses the strings in s, each string can either be a address,
 // address:port or a filename. The address part is checked and the filename case a
 // resolv.conf like file is parsed and the nameserver found are returned.

@@ -2,15 +2,16 @@ BUILD_VERBOSE := -v
 
 TEST_VERBOSE := -v
 
-DOCKER_IMAGE_NAME := $$USER/coredns
-DOCKER_VERSION := $(shell grep 'coreVersion' coremain/version.go | awk '{ print $$3 }' | tr -d '"')
+DOCKER_IMAGE_NAME ?= $$USER/coredns
+DOCKER_VERSION ?= $(shell grep 'coreVersion' coremain/version.go | awk '{ print $$3 }' | tr -d '"')
 
 all: coredns
 
 # Phony this to ensure we always build the binary.
 # TODO: Add .go file dependencies.
 .PHONY: coredns
-coredns: deps
+coredns: deps core/zmiddleware.go core/dnsserver/zdirectives.go
+	## go build
 	go build $(BUILD_VERBOSE) -ldflags="-s -w"
 
 .PHONY: docker
@@ -20,7 +21,7 @@ docker: deps
 	docker tag $(DOCKER_IMAGE_NAME):latest $(DOCKER_IMAGE_NAME):$(DOCKER_VERSION)
 
 .PHONY: deps
-deps:
+	## get go deps
 	go get ${BUILD_VERBOSE}
 
 .PHONY: test
@@ -48,9 +49,12 @@ clean:
 	go clean
 	rm -f coredns
 
+core/zmiddleware.go core/dnsserver/zdirectives.go: middleware.cfg
+	go generate coredns.go
+
 .PHONY: gen
 gen:
-	go generate ./core/...
+	go generate coredns.go
 
 .PHONY: distclean
 distclean: clean

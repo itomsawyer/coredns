@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
@@ -55,6 +55,9 @@ func (h errorHandler) recovery(ctx context.Context, w dns.ResponseWriter, r *dns
 	if rec == nil {
 		return
 	}
+
+	callers := getCallers(rec)
+	h.Log.Printf("recovered from panic %q. Call stack:\n%v", rec, callers)
 
 	state := request.Request{W: w, Req: r}
 	// Obtain source of panic
@@ -104,6 +107,19 @@ func debugMsg(rcode int, r *dns.Msg) *dns.Msg {
 	answer := new(dns.Msg)
 	answer.SetRcode(r, rcode)
 	return answer
+}
+
+func getCallers(r interface{}) string {
+	callers := ""
+	for i := 0; true; i++ {
+		_, file, line, ok := runtime.Caller(i)
+		if !ok {
+			break
+		}
+		callers = callers + fmt.Sprintf("%v:%v\n", file, line)
+	}
+
+	return callers
 }
 
 const timeFormat = "02/Jan/2006:15:04:05 -0700"

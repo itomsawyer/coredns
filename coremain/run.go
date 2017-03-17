@@ -11,13 +11,14 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 
 	"github.com/mholt/caddy"
 
-	"github.com/miekg/coredns/core/dnsserver"
+	"github.com/coredns/coredns/core/dnsserver"
 
 	// Plug in CoreDNS
-	_ "github.com/miekg/coredns/core"
+	_ "github.com/coredns/coredns/core"
 )
 
 func init() {
@@ -47,6 +48,7 @@ func init() {
 	flag.StringVar(&caddy.PidFile, "pidfile", "", "Path to write pid file")
 	flag.BoolVar(&version, "version", false, "Show version")
 	flag.BoolVar(&dnsserver.Quiet, "quiet", false, "Quiet mode (no initialization output)")
+	flag.BoolVar(&reload, "reload", false, "Reload CoreDNS configurations")
 
 	caddy.RegisterCaddyfileLoader("flag", caddy.LoaderFunc(confLoader))
 	caddy.SetDefaultCaddyfileLoader("default", caddy.LoaderFunc(defaultLoader))
@@ -78,6 +80,31 @@ func Run() {
 	if plugins {
 		fmt.Println(caddy.DescribePlugins())
 		os.Exit(0)
+	}
+	if reload {
+		data, err := ioutil.ReadFile(caddy.PidFile)
+		if err != nil {
+			fmt.Println("read pid file", caddy.PidFile, "error:", err)
+			os.Exit(-1)
+		}
+		pid, err := strconv.Atoi(strings.Trim(string(data), "\n"))
+		if err != nil {
+			fmt.Println("pid file fmt error", err)
+			os.Exit(-1)
+		}
+
+		fmt.Println("Reload CoreDNS", pid)
+		p := &os.Process{Pid: pid}
+		if err := p.Signal(syscall.SIGUSR1); err != nil {
+			fmt.Println("sending reload signal failed", err)
+		}
+		os.Exit(0)
+	}
+	if caddy.PidFile != "" {
+		if _, err := os.Stat(caddy.PidFile); err == nil {
+			fmt.Println("CoreDNS is running...")
+			os.Exit(-1)
+		}
 	}
 
 	// Set CPU cap
@@ -231,6 +258,7 @@ var (
 	logfile string
 	version bool
 	plugins bool
+	reload  bool
 )
 
 // Build information obtained with the help of -ldflags

@@ -2,10 +2,11 @@ package vane
 
 import (
 	"errors"
+	"time"
 
-	"github.com/miekg/coredns/core/dnsserver"
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/middleware/vane/models"
+	"github.com/coredns/coredns/core/dnsserver"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/vane/engine"
 
 	"github.com/mholt/caddy"
 )
@@ -22,13 +23,15 @@ func init() {
 }
 
 func setup(c *caddy.Controller) error {
-	vane, err := parseVane(c)
+	v, err := parseVane(c)
 	if err != nil {
 		return err
 	}
 
+	c.OnStartup(v.Init)
+	c.OnShutdown(v.Destroy)
+
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
-		v := vane
 		v.Next = next
 		return v
 	})
@@ -37,9 +40,7 @@ func setup(c *caddy.Controller) error {
 }
 
 func parseVane(c *caddy.Controller) (vane *Vane, err error) {
-	vane = &Vane{
-		DBHost: "root:@localhost/igw",
-	}
+	vane = NewVane()
 
 	for c.Next() {
 		if c.Val() == "vane" {
@@ -50,13 +51,34 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 
 			for c.NextBlock() {
 				switch c.Val() {
-				case "db":
+				case "upstream_timeout":
 					args := c.RemainingArgs()
-					if len(args) == 0 {
+					if len(args) != 1 {
 						return nil, c.ArgErr()
 					}
 
-					vane.DBHost = args[0]
+					to, err := time.ParseDuration(args[0])
+					if err != nil {
+						return nil, c.SyntaxErr("time duration")
+					}
+
+					vane.UpstreamTimeout = to
+
+				case "log":
+					lc, err := engine.ParseLogConfig(c)
+					if err != nil {
+						return nil, err
+					}
+
+					vane.LogConfigs = append(vane.LogConfigs, lc)
+
+				case "debug":
+					args := c.RemainingArgs()
+					if len(args) != 0 {
+						return nil, c.ArgErr()
+					}
+
+					vane.Debug = true
 
 				default:
 					return nil, c.ArgErr()
@@ -64,14 +86,6 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 			}
 		}
 	}
-
-	if vane.DBHost == "" {
-		return nil, ErrNoDBHost
-	}
-
-	c.OnFirstStartup(func() error {
-		return models.InitDB(vane.DBHost)
-	})
 
 	return vane, nil
 }

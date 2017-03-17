@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/miekg/coredns/middleware/pkg/dnsrecorder"
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 )
@@ -36,6 +36,7 @@ func New(r *dns.Msg, rr *dnsrecorder.Recorder, emptyValue string) Replacer {
 	rep := replacer{
 		replacements: map[string]string{
 			"{type}":  req.Type(),
+			"{ecs}":   req.GetRemoteAddr().String(),
 			"{name}":  req.Name(),
 			"{class}": req.Class(),
 			"{proto}": req.Proto(),

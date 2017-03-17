@@ -1,9 +1,9 @@
 # CoreDNS
 
-[![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://godoc.org/github.com/miekg/coredns)
-[![Build Status](https://img.shields.io/travis/miekg/coredns.svg?style=flat-square&label=build)](https://travis-ci.org/miekg/coredns)
-[![Code Coverage](https://codecov.io/github/miekg/coredns/coverage.svg?branch=master)](https://codecov.io/github/miekg/coredns?branch=master)
-[![Go Report Card](https://goreportcard.com/badge/github.com/miekg/coredns)](https://goreportcard.com/report/github.com/miekg/coredns)
+[![Documentation](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat-square)](https://godoc.org/github.com/coredns/coredns)
+[![Build Status](https://img.shields.io/travis/coredns/coredns.svg?style=flat-square&label=build)](https://travis-ci.org/coredns/coredns)
+[![Code Coverage](https://img.shields.io/codecov/c/github/coredns/coredns/master.svg?style=flat-square)](https://codecov.io/github/coredns/coredns?branch=master)
+[![Go Report Card](https://goreportcard.com/badge/github.com/coredns/coredns?style=flat-square)](https://goreportcard.com/report/coredns/coredns)
 
 CoreDNS is a DNS server that started as a fork of [Caddy](https://github.com/mholt/caddy/). It has the
 same model: it chains middleware. In fact it's so similar that CoreDNS is now a server type plugin for
@@ -44,7 +44,7 @@ Each of the middlewares has a README.md of its own.
 CoreDNS can be used as a authoritative nameserver for your domains, and should be stable enough to
 provide you with good DNS(SEC) service.
 
-There are still few [issues](https://github.com/miekg/coredns/issues), and work is ongoing on making
+There are still few [issues](https://github.com/coredns/coredns/issues), and work is ongoing on making
 things fast and to reduce the memory usage.
 
 All in all, CoreDNS should be able to provide you with enough functionality to replace parts of BIND
@@ -190,7 +190,7 @@ example.org {
 Website: <https://coredns.io>
 Twitter: [@corednsio](https://twitter.com/corednsio)
 Docs: <https://miek.nl/tags/coredns/>
-Github: <https://github.com/miekg/coredns>
+Github: <https://github.com/coredns/coredns>
 
 
 ## Systemd Service File

@@ -17,16 +17,36 @@ func TestSetupVane(t *testing.T) {
 		// positive
 		{
 			`vane { 
-				db  root:@localhost/igw
+				upstream_timeout 1s
 			}`,
 			"perfect",
 			false,
 		},
 		{
-			`vane {
-				db 
+			`
+			vane_engine {
+				log {
+					type console	
+					level info
+				}	
+			}
+			vane { 
+				upstream_timeout 1s
+				log {
+					type console	
+					level error
+				}
 			}`,
-			"miss db args",
+			"perfect",
+			false,
+		},
+
+		{
+			`
+			vane {
+				upstream_timeout
+			}`,
+			"miss upstream_timeout args",
 			true,
 		},
 	}
@@ -41,6 +61,7 @@ func TestSetupVane(t *testing.T) {
 				t.Fail()
 				return
 			}
+			continue
 		} else {
 			if err != nil {
 				t.Error(test.name, err)
@@ -50,5 +71,10 @@ func TestSetupVane(t *testing.T) {
 		}
 
 		t.Log("vane:", vane)
+		if len(vane.LogConfigs) != 0 {
+			for _, c := range vane.LogConfigs {
+				t.Log("vane log config:", c)
+			}
+		}
 	}
 }

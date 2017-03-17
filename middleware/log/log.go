@@ -5,13 +5,13 @@ import (
 	"log"
 	"time"
 
-	"github.com/miekg/coredns/middleware"
-	"github.com/miekg/coredns/middleware/metrics/vars"
-	"github.com/miekg/coredns/middleware/pkg/dnsrecorder"
-	"github.com/miekg/coredns/middleware/pkg/rcode"
-	"github.com/miekg/coredns/middleware/pkg/replacer"
-	"github.com/miekg/coredns/middleware/pkg/response"
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/metrics/vars"
+	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
+	"github.com/coredns/coredns/middleware/pkg/rcode"
+	"github.com/coredns/coredns/middleware/pkg/replacer"
+	"github.com/coredns/coredns/middleware/pkg/response"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
@@ -80,7 +80,7 @@ const (
 	// DefaultLogFilename is the default log filename.
 	DefaultLogFilename = "query.log"
 	// CommonLogFormat is the common log format.
-	CommonLogFormat = `{remote} ` + CommonLogEmptyValue + ` [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {rsize} {duration}`
+	CommonLogFormat = `{remote} {ecs} ` + CommonLogEmptyValue + ` [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {rsize} {duration}`
 	// CommonLogEmptyValue is the common empty log value.
 	CommonLogEmptyValue = "-"
 	// CombinedLogFormat is the combined log format.

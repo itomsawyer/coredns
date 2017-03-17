@@ -6,7 +6,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/miekg/coredns/middleware/pkg/edns"
+	"github.com/coredns/coredns/middleware/pkg/edns"
 
 	"github.com/miekg/dns"
 )
@@ -31,6 +31,15 @@ func (r *Request) NewWithQuestion(name string, typ uint16) Request {
 	req1 := Request{W: r.W, Req: r.Req.Copy()}
 	req1.Req.Question[0] = dns.Question{Name: dns.Fqdn(name), Qtype: dns.ClassINET, Qclass: typ}
 	return req1
+}
+
+func (r *Request) GetRemoteAddr() net.IP {
+	subnet := edns.ReadClientSubnet(r.Req)
+	if subnet == nil {
+		return net.ParseIP(r.IP()).To4()
+	} else {
+		return subnet.Address
+	}
 }
 
 // IP gets the (remote) IP address of the client making the request.

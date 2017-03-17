@@ -3,26 +3,27 @@ package proxy
 // functions other middleware might want to use to do lookup in the same style as the proxy.
 
 import (
+	"context"
 	"sync/atomic"
 	"time"
 
-	"github.com/miekg/coredns/request"
+	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
 )
 
 // NewLookup create a new proxy with the hosts in host and a Random policy.
 func NewLookup(hosts []string) Proxy {
-	// TODO(miek): maybe add optional protocol parameter?
 	p := Proxy{Next: nil}
 
 	upstream := &staticUpstream{
-		from:        "",
+		from:        ".",
 		Hosts:       make([]*UpstreamHost, len(hosts)),
 		Policy:      &Random{},
 		Spray:       nil,
 		FailTimeout: 10 * time.Second,
-		MaxFails:    3,
+		MaxFails:    3, // TODO(miek): disable error checking for simple lookups?
+		ex:          newDNSEx(),
 	}
 
 	for i, host := range hosts {
@@ -31,7 +32,6 @@ func NewLookup(hosts []string) Proxy {
 			Conns:       0,
 			Fails:       0,
 			FailTimeout: upstream.FailTimeout,
-			Exchanger:   newDNSEx(host),
 
 			Unhealthy: false,
 			CheckDown: func(upstream *staticUpstream) UpstreamHostDownFunc {
@@ -50,7 +50,7 @@ func NewLookup(hosts []string) Proxy {
 		}
 		upstream.Hosts[i] = uh
 	}
-	p.Upstreams = []Upstream{upstream}
+	p.Upstreams = &[]Upstream{upstream}
 	return p
 }
 
@@ -72,7 +72,11 @@ func (p Proxy) Forward(state request.Request) (*dns.Msg, error) {
 }
 
 func (p Proxy) lookup(state request.Request) (*dns.Msg, error) {
-	for _, upstream := range p.Upstreams {
+	upstream := p.match(state)
+	if upstream == nil {
+		return nil, errInvalidDomain
+	}
+	for {
 		start := time.Now()
 
 		// Since Select() should give us "up" hosts, keep retrying
@@ -88,7 +92,7 @@ func (p Proxy) lookup(state request.Request) (*dns.Msg, error) {
 
 			atomic.AddInt64(&host.Conns, 1)
 
-			reply, backendErr := host.Exchange(state)
+			reply, backendErr := upstream.Exchanger().Exchange(context.TODO(), host.Name, state)
 
 			atomic.AddInt64(&host.Conns, -1)
 
@@ -107,5 +111,4 @@ func (p Proxy) lookup(state request.Request) (*dns.Msg, error) {
 		}
 		return nil, errUnreachable
 	}
-	return nil, errUnreachable
 }

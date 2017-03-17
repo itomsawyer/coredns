@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/miekg/coredns/middleware/test"
+	"github.com/coredns/coredns/middleware/test"
 
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
@@ -225,6 +225,13 @@ var dnsTestCases = []test.Case{
 			test.TXT("dns-version.cluster.local. 28800 IN TXT \"1.0.0\""),
 		},
 	},
+	{
+		Qname: "next-in-chain.", Qtype: dns.TypeA,
+		Rcode: dns.RcodeSuccess,
+		Answer: []dns.RR{
+			test.A("next-in-chain.              0       IN      A       192.0.2.53"),
+		},
+	},
 }
 
 var dnsTestCasesPodsInsecure = []test.Case{
@@ -282,6 +289,13 @@ var dnsTestCasesCidrReverseZone = []test.Case{
 			test.PTR("115.0.0.10.in-addr.arpa.      303    IN      PTR       svc-c.test-1.svc.cluster.local."),
 		},
 	},
+	{
+		Qname: "next-in-chain.", Qtype: dns.TypeA,
+		Rcode: dns.RcodeSuccess,
+		Answer: []dns.RR{
+			test.A("next-in-chain.              0       IN      A       192.0.2.53"),
+		},
+	},
 }
 
 var dnsTestCasesPartialCidrReverseZone = []test.Case{
@@ -312,6 +326,49 @@ var dnsTestCasesPartialCidrReverseZone = []test.Case{
 		Qname: "115.0.0.10.in-addr.arpa.", Qtype: dns.TypePTR,
 		Rcode:  dns.RcodeServerFailure,
 		Answer: []dns.RR{},
+	},
+	{
+		Qname: "next-in-chain.", Qtype: dns.TypeA,
+		Rcode: dns.RcodeSuccess,
+		Answer: []dns.RR{
+			test.A("next-in-chain.              0       IN      A       192.0.2.53"),
+		},
+	},
+}
+
+var dnsTestCasesAllNSExposed = []test.Case{
+	{
+		Qname: "svc-1-a.test-1.svc.cluster.local.", Qtype: dns.TypeA,
+		Rcode: dns.RcodeSuccess,
+		Answer: []dns.RR{
+			test.A("svc-1-a.test-1.svc.cluster.local.      303    IN      A       10.0.0.100"),
+		},
+	},
+	{
+		Qname: "svc-c.test-2.svc.cluster.local.", Qtype: dns.TypeA,
+		Rcode: dns.RcodeSuccess,
+		Answer: []dns.RR{
+			test.A("svc-c.test-1.svc.cluster.local.      303    IN      A       10.0.0.120"),
+		},
+	},
+	{
+		Qname: "123.0.0.10.in-addr.arpa.", Qtype: dns.TypePTR,
+		Rcode:  dns.RcodeSuccess,
+		Answer: []dns.RR{},
+	},
+	{
+		Qname: "100.0.0.10.in-addr.arpa.", Qtype: dns.TypePTR,
+		Rcode: dns.RcodeSuccess,
+		Answer: []dns.RR{
+			test.PTR("100.0.0.10.in-addr.arpa.      303    IN      PTR       svc-1-a.test-1.svc.cluster.local."),
+		},
+	},
+	{
+		Qname: "120.0.0.10.in-addr.arpa.", Qtype: dns.TypePTR,
+		Rcode: dns.RcodeSuccess,
+		Answer: []dns.RR{
+			test.PTR("120.0.0.10.in-addr.arpa.      303    IN      PTR       svc-c.test-2.svc.cluster.local."),
+		},
 	},
 }
 
@@ -373,6 +430,9 @@ func TestKubernetesIntegration(t *testing.T) {
 		namespaces test-1
 		pods disabled
     }
+	erratic . {
+		drop 0
+	}
 `
 	doIntegrationTests(t, corefile, dnsTestCases)
 }
@@ -409,6 +469,9 @@ func TestKubernetesIntegrationCidrReverseZone(t *testing.T) {
                 namespaces test-1
 				cidrs 10.0.0.0/24				
     }
+	erratic . {
+		drop 0
+	}
 `
 	doIntegrationTests(t, corefile, dnsTestCasesCidrReverseZone)
 }
@@ -421,6 +484,20 @@ func TestKubernetesIntegrationPartialCidrReverseZone(t *testing.T) {
                 namespaces test-1
 				cidrs 10.0.0.96/28 10.0.0.120/32
     }
+	erratic . {
+		drop 0
+	}
 `
 	doIntegrationTests(t, corefile, dnsTestCasesPartialCidrReverseZone)
+}
+
+func TestKubernetesIntegrationAllNSExposed(t *testing.T) {
+	corefile :=
+		`.:0 {
+    kubernetes cluster.local {
+                endpoint http://localhost:8080
+				cidrs 10.0.0.0/24
+    }
+`
+	doIntegrationTests(t, corefile, dnsTestCasesAllNSExposed)
 }
