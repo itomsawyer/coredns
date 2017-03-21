@@ -74,6 +74,20 @@ func TestLogParse(t *testing.T) {
 			Class:      response.All,
 		}}},
 		{`log example.org log.txt {
+				class all
+				max_age 1
+				max_size 2
+				max_backups 3
+			}`, false, []Rule{{
+			NameScope:  "example.org.",
+			OutputFile: "log.txt",
+			Format:     CommonLogFormat,
+			Class:      response.All,
+			MaxAge:     1,
+			MaxSize:    2,
+			MaxBackups: 3,
+		}}},
+		{`log example.org log.txt {
 			class denial
 		}`, false, []Rule{{
 			NameScope:  "example.org.",
@@ -123,6 +137,21 @@ func TestLogParse(t *testing.T) {
 			if actualLogRule.Class != test.expectedLogRules[j].Class {
 				t.Errorf("Test %d expected %dth LogRule Class to be  %s  , but got %s",
 					i, j, test.expectedLogRules[j].Class, actualLogRule.Class)
+			}
+
+			if actualLogRule.MaxAge != test.expectedLogRules[j].MaxAge {
+				t.Errorf("Test %d expected %dth LogRule MaxAge to be  %d  , but got %d",
+					i, j, test.expectedLogRules[j].MaxAge, actualLogRule.MaxAge)
+			}
+
+			if actualLogRule.MaxBackups != test.expectedLogRules[j].MaxBackups {
+				t.Errorf("Test %d expected %dth LogRule MaxBackups to be  %d  , but got %d",
+					i, j, test.expectedLogRules[j].MaxBackups, actualLogRule.MaxBackups)
+			}
+
+			if actualLogRule.MaxSize != test.expectedLogRules[j].MaxSize {
+				t.Errorf("Test %d expected %dth LogRule MaxSize to be  %d  , but got %d",
+					i, j, test.expectedLogRules[j].MaxSize, actualLogRule.MaxSize)
 			}
 		}
 	}
