@@ -86,10 +86,10 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	// Try get clientset_id from previous vane_engine middleware which has done this job.
 	// In case vane_engine doesn't do its duty, try here then
 	value = ctx.Value("clientset_id")
+	cip = state.GetRemoteAddr()
+	v.Logger.Debug("get remote client addr %v", cip)
 	clientSetID, ok = value.(int)
 	if !ok {
-		cip = state.GetRemoteAddr()
-		v.Logger.Debug("get remote client addr %v", cip)
 		if cip == nil {
 			clientSetID = engine.DefaultClientSetID
 		} else {
@@ -266,14 +266,14 @@ try_again:
 	// 2. domain pool has falled back to default once and still got no good answer
 
 	//return the best effort answer we get
-	v.Logger.Warn("vane cannot find a good answer for clientset: %d dmpool: %d", clientSetID, domain.DmPoolID)
 	if replyMsg != nil {
+		v.Logger.Warn("vane cannot find a good answer for client: %v domain: %s", cip, q.Name)
 		w.WriteMsg(replyMsg)
-		return bestrc, nil
+		return 0, nil
 	}
 
 	//we tried our best but still got nothing
-	v.Logger.Error("vane cannot resolve any answer for clientset: %d dmpool: %d", clientSetID, domain.DmPoolID)
+	v.Logger.Error("vane cannot resolve any answer for client: %v domain: %s", cip, q.Name)
 	return dns.RcodeServerFailure, errUnreachable
 }
 
