@@ -10,6 +10,7 @@ import (
 
 	"github.com/hashicorp/go-syslog"
 	"github.com/mholt/caddy"
+	//"github.com/natefinch/lumberjack"
 )
 
 func init() {
@@ -26,6 +27,7 @@ func setup(c *caddy.Controller) error {
 	}
 
 	var writer io.Writer
+	//var logFile bool
 
 	switch handler.LogFile {
 	case "visible":
@@ -51,8 +53,21 @@ func setup(c *caddy.Controller) error {
 			return middleware.Error("errors", err)
 		}
 		writer = file
+		//logFile = true
 	}
+
 	handler.Log = log.New(writer, "", 0)
+	/*
+		if logFile {
+			handler.Log.SetOutput(&lumberjack.Logger{
+				Filename: handler.LogFile,
+				//MaxSize:    handler.MaxSize,    // megabytes after which new file is created
+				//MaxBackups: handler.MaxBackups, // number of backups
+				//MaxAge:     handler.MaxAge,     //days
+				LocalTime: true,
+			})
+		}
+	*/
 
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
 		handler.Next = next
@@ -84,6 +99,7 @@ func errorsParse(c *caddy.Controller) (errorHandler, error) {
 					handler.LogFile = where
 				}
 			}
+
 		}
 		return hadBlock, nil
 	}

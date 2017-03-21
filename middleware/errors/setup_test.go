@@ -26,6 +26,10 @@ func TestErrorsParse(t *testing.T) {
 			LogFile: "",
 			Debug:   true,
 		}},
+		{`errors { log errors.txt}`, false, errorHandler{
+			LogFile: "errors.txt",
+			Debug:   true,
+		}},
 	}
 
 	for i, test := range tests {
