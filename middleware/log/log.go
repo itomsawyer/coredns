@@ -76,7 +76,6 @@ type Rule struct {
 	MaxAge     int
 	MaxSize    int
 	MaxBackups int
-	LocalTime  int
 	Log        *log.Logger
 }
 

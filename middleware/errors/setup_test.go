@@ -22,13 +22,33 @@ func TestErrorsParse(t *testing.T) {
 			LogFile: "",
 			Debug:   true,
 		}},
-		{`errors { log visible }`, false, errorHandler{
+		{`errors { 
+			log visible
+		}`, false, errorHandler{
 			LogFile: "",
 			Debug:   true,
 		}},
-		{`errors { log errors.txt}`, false, errorHandler{
-			LogFile: "errors.txt",
-			Debug:   true,
+		{`errors { 
+			log visible
+			max_backups 3
+			max_age 1
+			max_size 2
+		}`, false, errorHandler{
+			LogFile:    "",
+			Debug:      true,
+			MaxAge:     1,
+			MaxSize:    2,
+			MaxBackups: 3,
+		}},
+		{`errors { 
+			log errors.txt
+			max_backups 3
+			max_size 2
+		}`, false, errorHandler{
+			LogFile:    "errors.txt",
+			Debug:      false,
+			MaxSize:    2,
+			MaxBackups: 3,
 		}},
 	}
 
@@ -48,6 +68,19 @@ func TestErrorsParse(t *testing.T) {
 		if actualErrorsRule.Debug != test.expectedErrorHandler.Debug {
 			t.Errorf("Test %d expected Debug to be %v, but got %v",
 				i, test.expectedErrorHandler.Debug, actualErrorsRule.Debug)
+		}
+
+		if actualErrorsRule.MaxAge != test.expectedErrorHandler.MaxAge {
+			t.Errorf("Test %d expected MaxAge to be %v, but got %v",
+				i, test.expectedErrorHandler.MaxAge, actualErrorsRule.MaxAge)
+		}
+		if actualErrorsRule.MaxSize != test.expectedErrorHandler.MaxSize {
+			t.Errorf("Test %d expected MaxSize to be %v, but got %v",
+				i, test.expectedErrorHandler.MaxSize, actualErrorsRule.MaxSize)
+		}
+		if actualErrorsRule.MaxBackups != test.expectedErrorHandler.MaxBackups {
+			t.Errorf("Test %d expected MaxBackups to be %v, but got %v",
+				i, test.expectedErrorHandler.MaxBackups, actualErrorsRule.MaxBackups)
 		}
 	}
 }
