@@ -216,6 +216,10 @@ try_again:
 				netLinkID := e.GetNetLinkID(a.A)
 				routes := e.GetRoute(view.RouteSetID, domain.DmPoolID, netLinkID)
 				// If has route, we consider the result to be valid
+				if len(routes) == 0 && netLinkID != engine.DefaultNetLinkID {
+					routes = e.GetRoute(view.RouteSetID, domain.DmPoolID, engine.DefaultNetLinkID)
+				}
+
 				if len(routes) == 0 {
 					continue
 				}
