@@ -11,6 +11,7 @@ drop view if exists netlink_view;
 drop view if exists netlinkset_view;
 drop view if exists src_view;
 drop view if exists filter_view;
+drop view if exists outlink_view;
 
 drop table if exists _locker;
 drop table if exists viewer;
@@ -33,6 +34,8 @@ drop table if exists ldns;
 drop table if exists outlink;
 drop table if exists rr;
 drop table if exists rrset;
+drop table if exists natlink;
+drop table if exists natserver;
 
 
 create table clientset (
@@ -106,6 +109,26 @@ unique key(name)
 )DEFAULT CHARSET=utf8 comment "network gateway, aka outlink";
 
 insert into outlink (name, addr) values ("global default", "0.0.0.0");
+
+create table natserver (
+id int not null auto_increment,
+name varchar(127) not null,
+addr varchar(127) not null,
+enable bool not null default true,
+unavailable smallint unsigned not null default 0 comment "if other than zero, outlink is unavailable, each bit indicate different reason",
+primary key(id),
+unique key(name)
+)DEFAULT CHARSET=utf8 comment  "nat server";
+
+create table natlink (
+id int not null auto_increment,
+outlink_id int,
+natserver_id int,
+addr varchar(255) not null,
+primary key(id),
+foreign key(outlink_id) references outlink(id) on delete restrict,
+foreign key(natserver_id) references natserver(id) on delete restrict
+)DEFAULT CHARSET=utf8 comment "outlink on specific nat server";
 
 create table netlinkset(
 id int not null auto_increment,
@@ -446,6 +469,11 @@ where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and 
 and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0
 group by routeset_id, netlinkset_id;
 
+create ALGORITHM = MERGE view outlink_view as
+select outlink_id,outlink.addr as outlink_addr ,natlink.addr as natlink_addr, natserver_id, natserver.name as nat_name
+from outlink,natlink,natserver
+where natlink.natserver_id = natserver.id and natlink.outlink_id = outlink.id and natserver.enable =true and natserver.unavailable = 0;
+
 create ALGORITHM = MERGE view base_route_view as
 select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, route.priority as route_priority, route.score as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
 from netlinkset, outlink, route, routeset
@@ -645,4 +673,22 @@ insert into oplog values(0, opr, "viewer", "update", id, null);
 !
 create trigger oplog_viewer_delete after delete on viewer for each row
 insert into oplog values(0, opr, "viewer", "delete", id, null);
+!
+create trigger oplog_natserver_insert after insert on natserver for each row
+insert into oplog values(0, opr, "natserver", "insert", id, null);
+!
+create trigger oplog_natserver_update after update on natserver for each row
+insert into oplog values(0, opr, "natserver", "update", id, null);
+!
+create trigger oplog_natserver_delete after delete on natserver for each row
+insert into oplog values(0, opr, "natserver", "delete", id, null);
+!
+create trigger oplog_natlink_insert after insert on natlink for each row
+insert into oplog values(0, opr, "natlink", "insert", id, null);
+!
+create trigger oplog_natlink_update after update on natlink for each row
+insert into oplog values(0, opr, "natlink", "update", id, null);
+!
+create trigger oplog_natlink_delete after delete on natlink for each row
+insert into oplog values(0, opr, "natlink", "delete", id, null);
 !
