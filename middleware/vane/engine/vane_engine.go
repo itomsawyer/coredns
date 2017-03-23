@@ -46,8 +46,8 @@ func (v *VaneEngine) InitLogger() error {
 }
 
 func (v *VaneEngine) Stop() {
-	if v.LinkManager != nil {
-		v.LinkManager.Stop()
+	if v.E != nil && v.E.LinkManager != nil {
+		v.E.LinkManager.Stop()
 	}
 }
 
@@ -70,5 +70,6 @@ func (v *VaneEngine) Reload() error {
 		}
 	}
 
+	v.E = e
 	return nil
 }
