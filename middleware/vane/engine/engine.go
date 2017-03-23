@@ -20,9 +20,11 @@ var (
 )
 
 type Engine struct {
-	ClientSet *nettree.NetTree
-	NetLink   *nettree.NetTree
-	Domain    *dmtree.DmTree
+	ClientSet   *nettree.NetTree
+	ClientSetWL *nettree.NetTree
+	NetLink     *nettree.NetTree
+	NetLinkWL   *nettree.NetTree
+	Domain      *dmtree.DmTree
 
 	UpstreamHosts map[string]*proxy.UpstreamHost
 	Upstream      map[int]*Upstream
@@ -53,6 +55,13 @@ func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
 		return ClientSet{}, errors.New("client ip is nil")
 	}
 
+	if e.ClientSetWL != nil {
+		v := e.ClientSet.FindByIP(ip)
+		if v != nil {
+			return v.(ClientSet), nil
+		}
+	}
+
 	if e.ClientSet == nil {
 		return ClientSet{}, errors.New("ClientSet not found")
 	}
@@ -62,12 +71,7 @@ func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
 		return ClientSet{}, errors.New("ClientSet not found")
 	}
 
-	cs, ok := v.(ClientSet)
-	if !ok {
-		return ClientSet{}, errors.New("Internal Error: ClientSet type assert fail")
-	}
-
-	return cs, nil
+	return v.(ClientSet), nil
 }
 
 func (e *Engine) GetNetLinkID(ip net.IP) int {
@@ -86,6 +90,13 @@ func (e *Engine) GetNetLinkID(ip net.IP) int {
 func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
 	if ip == nil {
 		return NetLink{}, errors.New("target ip is nil")
+	}
+
+	if e.NetLinkWL != nil {
+		v := e.NetLinkWL.FindByIP(ip)
+		if v != nil {
+			return v.(NetLink), nil
+		}
 	}
 
 	if e.NetLink == nil {
@@ -205,6 +216,20 @@ func (e *Engine) AddClient(ipnet *net.IPNet, id int, name string, prior int) err
 	return e.ClientSet.InsertByIPNet(cs.IPNet, cs, prior)
 }
 
+func (e *Engine) AddClientWL(ipnet *net.IPNet, id int, name string, prior int) error {
+	cs := ClientSet{
+		ID:    id,
+		Name:  name,
+		IPNet: ipnet,
+	}
+
+	if e.ClientSetWL == nil {
+		e.ClientSetWL = new(nettree.NetTree)
+	}
+
+	return e.ClientSetWL.InsertByIPNet(cs.IPNet, cs, prior)
+}
+
 func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string, prior int) error {
 	nl := NetLink{
 		ID:     id,
@@ -218,6 +243,21 @@ func (e *Engine) AddNetLink(ipnet *net.IPNet, id int, isp string, region string,
 	}
 
 	return e.NetLink.InsertByIPNet(nl.IPNet, nl, prior)
+}
+
+func (e *Engine) AddNetLinkWL(ipnet *net.IPNet, id int, isp string, region string, prior int) error {
+	nl := NetLink{
+		ID:     id,
+		Isp:    isp,
+		Region: region,
+		IPNet:  ipnet,
+	}
+
+	if e.NetLinkWL == nil {
+		e.NetLinkWL = new(nettree.NetTree)
+	}
+
+	return e.NetLinkWL.InsertByIPNet(nl.IPNet, nl, prior)
 }
 
 func (e *Engine) AddDomain(d Domain) error {

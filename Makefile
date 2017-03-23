@@ -10,30 +10,26 @@ all: coredns
 # Phony this to ensure we always build the binary.
 # TODO: Add .go file dependencies.
 .PHONY: coredns
-coredns: deps core/zmiddleware.go core/dnsserver/zdirectives.go
+coredns: core/zmiddleware.go core/dnsserver/zdirectives.go
 	## go build
 	go build $(BUILD_VERBOSE) -ldflags="-s -w"
 
 .PHONY: docker
-docker: deps
+docker: 
 	CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w"
 	docker build -t $(DOCKER_IMAGE_NAME) .
 	docker tag $(DOCKER_IMAGE_NAME):latest $(DOCKER_IMAGE_NAME):$(DOCKER_VERSION)
 
-.PHONY: deps
-	## get go deps
-	go get ${BUILD_VERBOSE}
-
 .PHONY: test
-test: deps
+test: 
 	go test -race $(TEST_VERBOSE) ./test ./middleware/...
 
 .PHONY: testk8s
-testk8s: deps
+testk8s: 
 	go test -race $(TEST_VERBOSE) -tags=k8s -run 'TestKubernetes' ./test ./middleware/kubernetes/...
 
 .PHONY: coverage
-coverage: deps
+coverage: 
 	set -e -x
 	echo "" > coverage.txt
 	for d in `go list ./... | grep -v vendor`; do \

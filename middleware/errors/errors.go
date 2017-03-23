@@ -17,10 +17,13 @@ import (
 
 // errorHandler handles DNS errors (and errors from other middleware).
 type errorHandler struct {
-	Next    middleware.Handler
-	LogFile string
-	Log     *log.Logger
-	Debug   bool // if true, errors are written out to client rather than to a log
+	Next       middleware.Handler
+	LogFile    string
+	Log        *log.Logger
+	Debug      bool // if true, errors are written out to client rather than to a log
+	MaxAge     int
+	MaxSize    int
+	MaxBackups int
 }
 
 // ServeDNS implements the middleware.Handler interface.
@@ -56,8 +59,10 @@ func (h errorHandler) recovery(ctx context.Context, w dns.ResponseWriter, r *dns
 		return
 	}
 
-	callers := getCallers(rec)
-	h.Log.Printf("recovered from panic %q. Call stack:\n%v", rec, callers)
+	if h.Log != nil {
+		callers := getCallers(rec)
+		h.Log.Printf("recovered from panic %q. Call stack:\n%v", rec, callers)
+	}
 
 	state := request.Request{W: w, Req: r}
 	// Obtain source of panic

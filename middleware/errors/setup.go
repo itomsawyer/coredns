@@ -4,12 +4,14 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
 
 	"github.com/hashicorp/go-syslog"
 	"github.com/mholt/caddy"
+	"github.com/natefinch/lumberjack"
 )
 
 func init() {
@@ -26,6 +28,7 @@ func setup(c *caddy.Controller) error {
 	}
 
 	var writer io.Writer
+	var logFile bool
 
 	switch handler.LogFile {
 	case "visible":
@@ -51,8 +54,19 @@ func setup(c *caddy.Controller) error {
 			return middleware.Error("errors", err)
 		}
 		writer = file
+		logFile = true
 	}
+
 	handler.Log = log.New(writer, "", 0)
+	if logFile {
+		handler.Log.SetOutput(&lumberjack.Logger{
+			Filename:   handler.LogFile,
+			MaxSize:    handler.MaxSize,    // megabytes after which new file is created
+			MaxBackups: handler.MaxBackups, // number of backups
+			MaxAge:     handler.MaxAge,     //days
+			LocalTime:  true,
+		})
+	}
 
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
 		handler.Next = next
@@ -71,19 +85,52 @@ func errorsParse(c *caddy.Controller) (errorHandler, error) {
 		for c.NextBlock() {
 			hadBlock = true
 
-			what := c.Val()
-			if !c.NextArg() {
-				return hadBlock, c.ArgErr()
-			}
-			where := c.Val()
-
-			if what == "log" {
-				if where == "visible" {
+			switch c.Val() {
+			case "max_age":
+				maxAge := c.RemainingArgs()
+				if len(maxAge) == 0 {
+					return hadBlock, c.ArgErr()
+				}
+				v, err := strconv.Atoi(maxAge[0])
+				if err != nil {
+					return hadBlock, c.SyntaxErr("max_age parse error" + err.Error())
+				}
+				handler.MaxAge = v
+			case "max_backups":
+				maxBackups := c.RemainingArgs()
+				if len(maxBackups) == 0 {
+					return hadBlock, c.ArgErr()
+				}
+				v, err := strconv.Atoi(maxBackups[0])
+				if err != nil {
+					return hadBlock, c.SyntaxErr("max_backups parse error" + err.Error())
+				}
+				handler.MaxBackups = v
+			case "max_size":
+				maxSize := c.RemainingArgs()
+				if len(maxSize) == 0 {
+					return hadBlock, c.ArgErr()
+				}
+				v, err := strconv.Atoi(maxSize[0])
+				if err != nil {
+					return hadBlock, c.SyntaxErr("max_size parse error" + err.Error())
+				}
+				handler.MaxSize = v
+			case "log":
+				where := c.RemainingArgs()
+				if len(where) == 0 {
+					return hadBlock, c.ArgErr()
+				}
+				if where[0] == "visible" {
 					handler.Debug = true
 				} else {
-					handler.LogFile = where
+					handler.LogFile = where[0]
 				}
+
+			default:
+				return hadBlock, c.ArgErr()
 			}
+
 		}
 		return hadBlock, nil
 	}

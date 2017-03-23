@@ -73,6 +73,9 @@ type Rule struct {
 	Class      response.Class
 	OutputFile string
 	Format     string
+	MaxAge     int
+	MaxSize    int
+	MaxBackups int
 	Log        *log.Logger
 }
 

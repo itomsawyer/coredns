@@ -1,2 +1,0 @@
- INSERT IGNORE INTO `domainlink` (`domain_pool_id`,`netlink_id`,`netlinkset_id`,`enable`) VALUES (2,1,8,1),(2,10,18,1),(2,5,11,1),(2,10,1,1),(2,10,12,1),(2,5,6,1),(2,3,5,1),(2,7,12,1),(2,8,18,1),(2,3,4,1);
- INSERT IGNORE INTO `domainlink` (`domain_pool_id`,`netlink_id`,`netlinkset_id`,`enable`) VALUES (1,1,5,1),(1,2,16,1),(1,3,3,1),(1,4,8,1),(1,5,2,1),(1,6,15,1),(1,7,6,1),(1,8,4,1),(1,9,6,1),(1,10,2,1);

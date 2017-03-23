@@ -1,11 +1,8 @@
-hash: 31ee846a6dd2831098ecdceaef271df776ae581fec087a2df6684a33f2a05349
-updated: 2017-03-15T21:36:04.83484136+08:00
+hash: 28f02e55b72b9a1e256517fae53b038b992017a9308d82449dcf21e190baad8b
+updated: 2017-03-22T04:48:00.671305674+08:00
 imports:
-- name: cloud.google.com/go
-  version: a39e88be64dbe353e94499acdba057066e657aba
-  subpackages:
-  - compute/metadata
-  - internal
+- name: cloud.google.com/go/compute/metadata
+  version: daf945bb8684eb8df711af0c3e3a07930a2a01b0
 - name: github.com/apache/thrift
   version: e2bc9727500584e055ce603bf95f00165c657ec2
   subpackages:
@@ -96,8 +93,6 @@ imports:
   version: 553a641470496b2327abcac10b36396bd98e45c9
 - name: github.com/google/gofuzz
   version: 44d81051d367757e1c7c6a5a86423ece9afcf63c
-- name: github.com/googleapis/gax-go
-  version: da06d194a00e19ce00d9011a13931c3f6f6887c7
 - name: github.com/hashicorp/go-syslog
   version: b609c7d9de4658cded34a7336b90886c56f9dbdb
 - name: github.com/hashicorp/golang-lru
@@ -136,6 +131,8 @@ imports:
   version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
   subpackages:
   - snappy-go
+- name: github.com/natefinch/lumberjack
+  version: dd45e6a67c53f673bb49ca8a001fd3a63ceb640e
 - name: github.com/nsqio/go-nsq
   version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
 - name: github.com/opencontainers/go-digest
@@ -203,7 +200,6 @@ imports:
   version: f2499483f923065a842d38eb4c7f1927e6fc6e6d
   subpackages:
   - context
-  - context/ctxhttp
   - http2
   - http2/hpack
   - idna
@@ -211,24 +207,24 @@ imports:
   - lex/httplex
   - trace
 - name: golang.org/x/oauth2
-  version: b9780ec78894ab900c062d58ee3076cd9b2a4501
+  version: 7fdf09982454086d5570c7db3e11f360194830ca
   subpackages:
   - google
   - internal
   - jws
   - jwt
 - name: golang.org/x/sys
-  version: e4594059fe4cde2daf423055a596c2cd1e6c9adf
+  version: 99f16d856c9836c42d24e7ab64ea72916925fa97
   subpackages:
   - unix
 - name: golang.org/x/text
-  version: 0ad425fe45e885577bef05dc1c50f72e33188b16
+  version: f28f36722d5ef2f9655ad3de1f248e3e52ad5ebd
   subpackages:
   - transform
   - unicode/norm
   - width
 - name: google.golang.org/appengine
-  version: 3a452f9e00122ead39586d68ffdb9c6e1326af3c
+  version: b5c7c247998fb18ace83308f41199d04c78d58f1
   subpackages:
   - internal
   - internal/app_identity

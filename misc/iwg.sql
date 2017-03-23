@@ -11,6 +11,7 @@ drop view if exists netlink_view;
 drop view if exists netlinkset_view;
 drop view if exists src_view;
 drop view if exists filter_view;
+drop view if exists outlink_view;
 
 drop table if exists _locker;
 drop table if exists viewer;
@@ -33,6 +34,8 @@ drop table if exists ldns;
 drop table if exists outlink;
 drop table if exists rr;
 drop table if exists rrset;
+drop table if exists natlink;
+drop table if exists natserver;
 
 
 create table clientset (
@@ -43,7 +46,7 @@ primary key (id),
 unique key (name)
 )DEFAULT CHARSET=utf8 comment "client ipnet set";
 
-insert into clientset (name, info) values("unknown", "global default");
+insert into clientset (name, info) values("default", "global default");
 
 create table ipnet (
 id int not null auto_increment,
@@ -82,7 +85,7 @@ primary key (id),
 unique key (name)
 )DEFAULT CHARSET=utf8 comment "serve domains set";
 
-insert into domain_pool (name, info) values("global default", "global default");
+insert into domain_pool (name, info) values("default", "global default");
 
 create table domain (
 id int not null auto_increment,
@@ -105,7 +108,27 @@ primary key(id),
 unique key(name)
 )DEFAULT CHARSET=utf8 comment "network gateway, aka outlink";
 
-insert into outlink (name, addr) values ("global default", "0.0.0.0");
+insert into outlink (name, addr) values ("default", "0.0.0.0");
+
+create table natserver (
+id int not null auto_increment,
+name varchar(127) not null,
+addr varchar(127) not null,
+enable bool not null default true,
+unavailable smallint unsigned not null default 0 comment "if other than zero, outlink is unavailable, each bit indicate different reason",
+primary key(id),
+unique key(name)
+)DEFAULT CHARSET=utf8 comment  "nat server";
+
+create table natlink (
+id int not null auto_increment,
+outlink_id int,
+natserver_id int,
+addr varchar(255) not null,
+primary key(id),
+foreign key(outlink_id) references outlink(id) on delete restrict,
+foreign key(natserver_id) references natserver(id) on delete restrict
+)DEFAULT CHARSET=utf8 comment "outlink on specific nat server";
 
 create table netlinkset(
 id int not null auto_increment,
@@ -114,7 +137,7 @@ primary key(id),
 unique key(name)
 )DEFAULT CHARSET=utf8 comment "netlink set ";
 
-insert into netlinkset(name) values("global default");
+insert into netlinkset(name) values("default");
 
 create table netlink (
 id int not null auto_increment,
@@ -125,7 +148,7 @@ primary key(id),
 unique key(isp, region)
 )DEFAULT CHARSET=utf8 comment "netlink (isp + province or CP) of a target ip";
 
-insert into netlink (isp, region) values("unknown", "unknown");
+insert into netlink (isp, region) values("default", "global default");
 
 create table iptable (
 id int not null auto_increment,
@@ -178,12 +201,12 @@ primary key(id),
 unique key(name)
 )DEFAULT CHARSET=utf8;
 
-insert into routeset(name, info) values("global default", "global default");
+insert into routeset(name, info) values("default", "global default");
 
 create table route (
 id int not null auto_increment,
-netlinkset_id int not null,
 routeset_id int not null,
+netlinkset_id int not null,
 outlink_id int not null,
 enable bool not null default true,
 priority smallint not null default 20,
@@ -205,7 +228,7 @@ primary key(id),
 unique key(name)
 )DEFAULT CHARSET=utf8 comment "policy index of choose ldns upstream forwarder";
 
-insert into policy (name) values ("global default policy");
+insert into policy (name) values ("default");
 
 create table ldns (
 id int not null auto_increment,
@@ -218,7 +241,7 @@ primary key(id),
 unique key(name)
 )DEFAULT CHARSET=utf8 comment "upstream ldns info";
 
-insert into ldns (name, addr) values("global default", "223.5.5.5");
+insert into ldns (name, addr) values("default", "223.5.5.5");
 
 create table rrset(
 id int not null auto_increment,
@@ -341,46 +364,46 @@ time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 primary key(id)
 )DEFAULT CHARSET=utf8 comment "Log of operations to other tables in this db";
 
-ALTER TABLE clientset
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE domain
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE domain_pool
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE domainlink
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE filter
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE ipnet
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE ipnet_wl
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE iptable
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE iptable_wl
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE ldns
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE netlink
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE netlinkset
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE outlink
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE policy
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE policy_detail
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE route
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE routeset
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE rr
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE rrset
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
-ALTER TABLE viewer
-ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE clientset
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE domain
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE domain_pool
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE domainlink
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE filter
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE ipnet
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE ipnet_wl
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE iptable
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE iptable_wl
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE ldns
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE netlink
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE netlinkset
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE outlink
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE policy
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE policy_detail
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE route
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE routeset
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE rr
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE rrset
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
+-- ALTER TABLE viewer
+-- ADD COLUMN opr VARCHAR(16) NOT NULL DEFAULT 'unknown';
 
 create ALGORITHM = MERGE view filter_view as
 select
@@ -434,10 +457,10 @@ select iptable_wl.id as iptable_wl_id, ip_start, inet_aton(ip_start) as ip_start
 from netlink join iptable_wl on iptable_wl.netlink_id = netlink.id;
 
 create ALGORITHM = MERGE view dst_view as
-select domainlink.domain_pool_id, domainlink.netlink_id, domainlink.netlinkset_id, domain_pool.name as domain_pool_name, isp, region
-from  domain_pool, netlink, domainlink
+select domainlink.domain_pool_id, domainlink.netlink_id, domainlink.netlinkset_id, domain_pool.name as domain_pool_name, isp, region, netlinkset.name as netlinkset_name
+from  domain_pool, netlink, domainlink, netlinkset
 where domain_pool.id = domainlink.domain_pool_id and netlink.id = domainlink.netlink_id and domain_pool.enable = true and domain_pool.unavailable = 0
-and domainlink.enable = true;
+and domainlink.enable = true and netlinkset.id = domainlink.netlinkset_id;
 
 create ALGORITHM = MERGE view route_view as
 select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, min(route.priority) as route_priority, max(route.score) as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
@@ -445,6 +468,11 @@ from netlinkset, outlink, route, routeset
 where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
 and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0
 group by routeset_id, netlinkset_id;
+
+create ALGORITHM = MERGE view outlink_view as
+select outlink_id,outlink.addr as outlink_addr ,natlink.addr as natlink_addr, natserver_id, natserver.name as nat_name
+from outlink,natlink,natserver
+where natlink.natserver_id = natserver.id and natlink.outlink_id = outlink.id and natserver.enable =true and natserver.unavailable = 0;
 
 create ALGORITHM = MERGE view base_route_view as
 select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, route.priority as route_priority, route.score as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
@@ -468,181 +496,181 @@ where clientset.id = viewer.clientset_id and domain_pool.id = viewer.domain_pool
 and domain_pool.enable = true and domain_pool.unavailable = 0 and viewer.enable = true;
 
 
-delimiter !
-create trigger oplog_clientset_insert after insert on clientset for each row
-insert into oplog values(0, opr, "clientset", "insert", id, null);
-!
-create trigger oplog_clientset_update after update on clientset for each row
-insert into oplog values(0, opr, "clientset", "update", id, null);
-!
-create trigger oplog_clientset_delete after delete on clientset for each row
-insert into oplog values(0, opr, "clientset", "delete", id, null);
-!
-create trigger oplog_domain_insert after insert on domain for each row
-insert into oplog values(0, opr, "domain", "insert", id, null);
-!
-create trigger oplog_domain_update after update on domain for each row
-insert into oplog values(0, opr, "domain", "update", id, null);
-!
-create trigger oplog_domain_delete after delete on domain for each row
-insert into oplog values(0, opr, "domain", "delete", id, null);
-!
-create trigger oplog_domain_pool_insert after insert on domain_pool for each row
-insert into oplog values(0, opr, "domain_pool", "insert", id, null);
-!
-create trigger oplog_domain_pool_update after update on domain_pool for each row
-insert into oplog values(0, opr, "domain_pool", "update", id, null);
-!
-create trigger oplog_domain_pool_delete after delete on domain_pool for each row
-insert into oplog values(0, opr, "domain_pool", "delete", id, null);
-!
-create trigger oplog_domainlink_insert after insert on domainlink for each row
-insert into oplog values(0, opr, "domainlink", "insert", id, null);
-!
-create trigger oplog_domainlink_update after update on domainlink for each row
-insert into oplog values(0, opr, "domainlink", "update", id, null);
-!
-create trigger oplog_domainlink_delete after delete on domainlink for each row
-insert into oplog values(0, opr, "domainlink", "delete", id, null);
-!
-create trigger oplog_filter_insert after insert on filter for each row
-insert into oplog values(0, opr, "filter", "insert", id, null);
-!
-create trigger oplog_filter_update after update on filter for each row
-insert into oplog values(0, opr, "filter", "update", id, null);
-!
-create trigger oplog_filter_delete after delete on filter for each row
-insert into oplog values(0, opr, "filter", "delete", id, null);
-!
-create trigger oplog_ipnet_insert after insert on ipnet for each row
-insert into oplog values(0, opr, "ipnet", "insert", id, null);
-!
-create trigger oplog_ipnet_update after update on ipnet for each row
-insert into oplog values(0, opr, "ipnet", "update", id, null);
-!
-create trigger oplog_ipnet_delete after delete on ipnet for each row
-insert into oplog values(0, opr, "ipnet", "delete", id, null);
-!
-create trigger oplog_ipnet_wl_insert after insert on ipnet_wl for each row
-insert into oplog values(0, opr, "ipnet_wl", "insert", id, null);
-!
-create trigger oplog_ipnet_wl_update after update on ipnet_wl for each row
-insert into oplog values(0, opr, "ipnet_wl", "update", id, null);
-!
-create trigger oplog_ipnet_wl_delete after delete on ipnet_wl for each row
-insert into oplog values(0, opr, "ipnet_wl", "delete", id, null);
-!
-create trigger oplog_iptable_insert after insert on iptable for each row
-insert into oplog values(0, opr, "iptable", "insert", id, null);
-!
-create trigger oplog_iptable_update after update on iptable for each row
-insert into oplog values(0, opr, "iptable", "update", id, null);
-!
-create trigger oplog_iptable_delete after delete on iptable for each row
-insert into oplog values(0, opr, "iptable", "delete", id, null);
-!
-create trigger oplog_iptable_wl_insert after insert on iptable_wl for each row
-insert into oplog values(0, opr, "iptable_wl", "insert", id, null);
-!
-create trigger oplog_iptable_wl_update after update on iptable_wl for each row
-insert into oplog values(0, opr, "iptable_wl", "update", id, null);
-!
-create trigger oplog_iptable_wl_delete after delete on iptable_wl for each row
-insert into oplog values(0, opr, "iptable_wl", "delete", id, null);
-!
-create trigger oplog_ldns_insert after insert on ldns for each row
-insert into oplog values(0, opr, "ldns", "insert", id, null);
-!
-create trigger oplog_ldns_update after update on ldns for each row
-insert into oplog values(0, opr, "ldns", "update", id, null);
-!
-create trigger oplog_ldns_delete after delete on ldns for each row
-insert into oplog values(0, opr, "ldns", "delete", id, null);
-!
-create trigger oplog_netlink_insert after insert on netlink for each row
-insert into oplog values(0, opr, "netlink", "insert", id, null);
-!
-create trigger oplog_netlink_update after update on netlink for each row
-insert into oplog values(0, opr, "netlink", "update", id, null);
-!
-create trigger oplog_netlink_delete after delete on netlink for each row
-insert into oplog values(0, opr, "netlink", "delete", id, null);
-!
-create trigger oplog_netlinkset_insert after insert on netlinkset for each row
-insert into oplog values(0, opr, "netlinkset", "insert", id, null);
-!
-create trigger oplog_netlinkset_update after update on netlinkset for each row
-insert into oplog values(0, opr, "netlinkset", "update", id, null);
-!
-create trigger oplog_netlinkset_delete after delete on netlinkset for each row
-insert into oplog values(0, opr, "netlinkset", "delete", id, null);
-!
-create trigger oplog_outlink_update after update on outlink for each row
-insert into oplog values(0, opr, "outlink", "update", id, null);
-!
-create trigger oplog_outlink_delete after delete on outlink for each row
-insert into oplog values(0, opr, "outlink", "delete", id, null);
-!
-create trigger oplog_policy_insert after insert on policy for each row
-insert into oplog values(0, opr, "policy", "insert", id, null);
-!
-create trigger oplog_policy_update after update on policy for each row
-insert into oplog values(0, opr, "policy", "update", id, null);
-!
-create trigger oplog_policy_delete after delete on policy for each row
-insert into oplog values(0, opr, "policy", "delete", id, null);
-!
-create trigger oplog_policy_detail_insert after insert on policy_detail for each row
-insert into oplog values(0, opr, "policy_detail", "insert", id, null);
-!
-create trigger oplog_policy_detail_update after update on policy_detail for each row
-insert into oplog values(0, opr, "policy_detail", "update", id, null);
-!
-create trigger oplog_policy_detail_delete after delete on policy_detail for each row
-insert into oplog values(0, opr, "policy_detail", "delete", id, null);
-!
-create trigger oplog_route_insert after insert on route for each row
-insert into oplog values(0, opr, "route", "insert", id, null);
-!
-create trigger oplog_route_update after update on route for each row
-insert into oplog values(0, opr, "route", "update", id, null);
-!
-create trigger oplog_route_delete after delete on route for each row
-insert into oplog values(0, opr, "route", "delete", id, null);
-!
-create trigger oplog_routeset_insert after insert on routeset for each row
-insert into oplog values(0, opr, "routeset", "insert", id, null);
-!
-create trigger oplog_routeset_update after update on routeset for each row
-insert into oplog values(0, opr, "routeset", "update", id, null);
-!
-create trigger oplog_routeset_delete after delete on routeset for each row
-insert into oplog values(0, opr, "routeset", "delete", id, null);
-!
-create trigger oplog_rr_insert after insert on rr for each row
-insert into oplog values(0, opr, "rr", "insert", id, null);
-!
-create trigger oplog_rr_update after update on rr for each row
-insert into oplog values(0, opr, "rr", "update", id, null);
-!
-create trigger oplog_rr_delete after delete on rr for each row
-insert into oplog values(0, opr, "rr", "delete", id, null);
-!
-create trigger oplog_rrset_insert after insert on rrset for each row
-insert into oplog values(0, opr, "rrset", "insert", id, null);
-!
-create trigger oplog_rrset_update after update on rrset for each row
-insert into oplog values(0, opr, "rrset", "update", id, null);
-!
-create trigger oplog_rrset_delete after delete on rrset for each row
-insert into oplog values(0, opr, "rrset", "delete", id, null);
-!
-create trigger oplog_viewer_insert after insert on viewer for each row
-insert into oplog values(0, opr, "viewer", "insert", id, null);
-!
-create trigger oplog_viewer_update after update on viewer for each row
-insert into oplog values(0, opr, "viewer", "update", id, null);
-!
-create trigger oplog_viewer_delete after delete on viewer for each row
-insert into oplog values(0, opr, "viewer", "delete", id, null);
-!
+-- delimiter !
+-- create trigger oplog_clientset_insert after insert on clientset for each row
+-- insert into oplog values(0, opr, "clientset", "insert", id, null);
+-- !
+-- create trigger oplog_clientset_update after update on clientset for each row
+-- insert into oplog values(0, opr, "clientset", "update", id, null);
+-- !
+-- create trigger oplog_clientset_delete after delete on clientset for each row
+-- insert into oplog values(0, opr, "clientset", "delete", id, null);
+-- !
+-- create trigger oplog_domain_insert after insert on domain for each row
+-- insert into oplog values(0, opr, "domain", "insert", id, null);
+-- !
+-- create trigger oplog_domain_update after update on domain for each row
+-- insert into oplog values(0, opr, "domain", "update", id, null);
+-- !
+-- create trigger oplog_domain_delete after delete on domain for each row
+-- insert into oplog values(0, opr, "domain", "delete", id, null);
+-- !
+-- create trigger oplog_domain_pool_insert after insert on domain_pool for each row
+-- insert into oplog values(0, opr, "domain_pool", "insert", id, null);
+-- !
+-- create trigger oplog_domain_pool_update after update on domain_pool for each row
+-- insert into oplog values(0, opr, "domain_pool", "update", id, null);
+-- !
+-- create trigger oplog_domain_pool_delete after delete on domain_pool for each row
+-- insert into oplog values(0, opr, "domain_pool", "delete", id, null);
+-- !
+-- create trigger oplog_domainlink_insert after insert on domainlink for each row
+-- insert into oplog values(0, opr, "domainlink", "insert", id, null);
+-- !
+-- create trigger oplog_domainlink_update after update on domainlink for each row
+-- insert into oplog values(0, opr, "domainlink", "update", id, null);
+-- !
+-- create trigger oplog_domainlink_delete after delete on domainlink for each row
+-- insert into oplog values(0, opr, "domainlink", "delete", id, null);
+-- !
+-- create trigger oplog_filter_insert after insert on filter for each row
+-- insert into oplog values(0, opr, "filter", "insert", id, null);
+-- !
+-- create trigger oplog_filter_update after update on filter for each row
+-- insert into oplog values(0, opr, "filter", "update", id, null);
+-- !
+-- create trigger oplog_filter_delete after delete on filter for each row
+-- insert into oplog values(0, opr, "filter", "delete", id, null);
+-- !
+-- create trigger oplog_ipnet_insert after insert on ipnet for each row
+-- insert into oplog values(0, opr, "ipnet", "insert", id, null);
+-- !
+-- create trigger oplog_ipnet_update after update on ipnet for each row
+-- insert into oplog values(0, opr, "ipnet", "update", id, null);
+-- !
+-- create trigger oplog_ipnet_delete after delete on ipnet for each row
+-- insert into oplog values(0, opr, "ipnet", "delete", id, null);
+-- !
+-- create trigger oplog_ipnet_wl_insert after insert on ipnet_wl for each row
+-- insert into oplog values(0, opr, "ipnet_wl", "insert", id, null);
+-- !
+-- create trigger oplog_ipnet_wl_update after update on ipnet_wl for each row
+-- insert into oplog values(0, opr, "ipnet_wl", "update", id, null);
+-- !
+-- create trigger oplog_ipnet_wl_delete after delete on ipnet_wl for each row
+-- insert into oplog values(0, opr, "ipnet_wl", "delete", id, null);
+-- !
+-- create trigger oplog_iptable_insert after insert on iptable for each row
+-- insert into oplog values(0, opr, "iptable", "insert", id, null);
+-- !
+-- create trigger oplog_iptable_update after update on iptable for each row
+-- insert into oplog values(0, opr, "iptable", "update", id, null);
+-- !
+-- create trigger oplog_iptable_delete after delete on iptable for each row
+-- insert into oplog values(0, opr, "iptable", "delete", id, null);
+-- !
+-- create trigger oplog_iptable_wl_insert after insert on iptable_wl for each row
+-- insert into oplog values(0, opr, "iptable_wl", "insert", id, null);
+-- !
+-- create trigger oplog_iptable_wl_update after update on iptable_wl for each row
+-- insert into oplog values(0, opr, "iptable_wl", "update", id, null);
+-- !
+-- create trigger oplog_iptable_wl_delete after delete on iptable_wl for each row
+-- insert into oplog values(0, opr, "iptable_wl", "delete", id, null);
+-- !
+-- create trigger oplog_ldns_insert after insert on ldns for each row
+-- insert into oplog values(0, opr, "ldns", "insert", id, null);
+-- !
+-- create trigger oplog_ldns_update after update on ldns for each row
+-- insert into oplog values(0, opr, "ldns", "update", id, null);
+-- !
+-- create trigger oplog_ldns_delete after delete on ldns for each row
+-- insert into oplog values(0, opr, "ldns", "delete", id, null);
+-- !
+-- create trigger oplog_netlink_insert after insert on netlink for each row
+-- insert into oplog values(0, opr, "netlink", "insert", id, null);
+-- !
+-- create trigger oplog_netlink_update after update on netlink for each row
+-- insert into oplog values(0, opr, "netlink", "update", id, null);
+-- !
+-- create trigger oplog_netlink_delete after delete on netlink for each row
+-- insert into oplog values(0, opr, "netlink", "delete", id, null);
+-- !
+-- create trigger oplog_netlinkset_insert after insert on netlinkset for each row
+-- insert into oplog values(0, opr, "netlinkset", "insert", id, null);
+-- !
+-- create trigger oplog_netlinkset_update after update on netlinkset for each row
+-- insert into oplog values(0, opr, "netlinkset", "update", id, null);
+-- !
+-- create trigger oplog_netlinkset_delete after delete on netlinkset for each row
+-- insert into oplog values(0, opr, "netlinkset", "delete", id, null);
+-- !
+-- create trigger oplog_outlink_update after update on outlink for each row
+-- insert into oplog values(0, opr, "outlink", "update", id, null);
+-- !
+-- create trigger oplog_outlink_delete after delete on outlink for each row
+-- insert into oplog values(0, opr, "outlink", "delete", id, null);
+-- !
+-- create trigger oplog_policy_insert after insert on policy for each row
+-- insert into oplog values(0, opr, "policy", "insert", id, null);
+-- !
+-- create trigger oplog_policy_update after update on policy for each row
+-- insert into oplog values(0, opr, "policy", "update", id, null);
+-- !
+-- create trigger oplog_policy_delete after delete on policy for each row
+-- insert into oplog values(0, opr, "policy", "delete", id, null);
+-- !
+-- create trigger oplog_policy_detail_insert after insert on policy_detail for each row
+-- insert into oplog values(0, opr, "policy_detail", "insert", id, null);
+-- !
+-- create trigger oplog_policy_detail_update after update on policy_detail for each row
+-- insert into oplog values(0, opr, "policy_detail", "update", id, null);
+-- !
+-- create trigger oplog_policy_detail_delete after delete on policy_detail for each row
+-- insert into oplog values(0, opr, "policy_detail", "delete", id, null);
+-- !
+-- create trigger oplog_route_insert after insert on route for each row
+-- insert into oplog values(0, opr, "route", "insert", id, null);
+-- !
+-- create trigger oplog_route_update after update on route for each row
+-- insert into oplog values(0, opr, "route", "update", id, null);
+-- !
+-- create trigger oplog_route_delete after delete on route for each row
+-- insert into oplog values(0, opr, "route", "delete", id, null);
+-- !
+-- create trigger oplog_routeset_insert after insert on routeset for each row
+-- insert into oplog values(0, opr, "routeset", "insert", id, null);
+-- !
+-- create trigger oplog_routeset_update after update on routeset for each row
+-- insert into oplog values(0, opr, "routeset", "update", id, null);
+-- !
+-- create trigger oplog_routeset_delete after delete on routeset for each row
+-- insert into oplog values(0, opr, "routeset", "delete", id, null);
+-- !
+-- create trigger oplog_rr_insert after insert on rr for each row
+-- insert into oplog values(0, opr, "rr", "insert", id, null);
+-- !
+-- create trigger oplog_rr_update after update on rr for each row
+-- insert into oplog values(0, opr, "rr", "update", id, null);
+-- !
+-- create trigger oplog_rr_delete after delete on rr for each row
+-- insert into oplog values(0, opr, "rr", "delete", id, null);
+-- !
+-- create trigger oplog_rrset_insert after insert on rrset for each row
+-- insert into oplog values(0, opr, "rrset", "insert", id, null);
+-- !
+-- create trigger oplog_rrset_update after update on rrset for each row
+-- insert into oplog values(0, opr, "rrset", "update", id, null);
+-- !
+-- create trigger oplog_rrset_delete after delete on rrset for each row
+-- insert into oplog values(0, opr, "rrset", "delete", id, null);
+-- !
+-- create trigger oplog_viewer_insert after insert on viewer for each row
+-- insert into oplog values(0, opr, "viewer", "insert", id, null);
+-- !
+-- create trigger oplog_viewer_update after update on viewer for each row
+-- insert into oplog values(0, opr, "viewer", "update", id, null);
+-- !
+-- create trigger oplog_viewer_delete after delete on viewer for each row
+-- insert into oplog values(0, opr, "viewer", "delete", id, null);
+-- !

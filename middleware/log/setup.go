@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"strconv"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
@@ -12,6 +13,7 @@ import (
 	"github.com/hashicorp/go-syslog"
 	"github.com/mholt/caddy"
 	"github.com/miekg/dns"
+	"github.com/natefinch/lumberjack"
 )
 
 func init() {
@@ -32,6 +34,7 @@ func setup(c *caddy.Controller) error {
 		for i := 0; i < len(rules); i++ {
 			var err error
 			var writer io.Writer
+			var logFile bool
 
 			if rules[i].OutputFile == "stdout" {
 				writer = os.Stdout
@@ -49,9 +52,20 @@ func setup(c *caddy.Controller) error {
 					return middleware.Error("log", err)
 				}
 				writer = file
+				logFile = true
+
 			}
 
 			rules[i].Log = log.New(writer, "", 0)
+			if logFile {
+				rules[i].Log.SetOutput(&lumberjack.Logger{
+					Filename:   rules[i].OutputFile,
+					MaxSize:    rules[i].MaxSize,    // megabytes after which new file is created
+					MaxBackups: rules[i].MaxBackups, // number of backups
+					MaxAge:     rules[i].MaxAge,     //days
+					LocalTime:  true,
+				})
+			}
 		}
 
 		return nil
@@ -122,6 +136,37 @@ func logParse(c *caddy.Controller) ([]Rule, error) {
 				}
 				// update class and the last added Rule (bit icky)
 				rules[len(rules)-1].Class = cls
+			case "max_age":
+				maxAge := c.RemainingArgs()
+				if len(maxAge) == 0 {
+					return nil, c.ArgErr()
+				}
+				v, err := strconv.Atoi(maxAge[0])
+				if err != nil {
+					return nil, c.SyntaxErr("max_age parse error" + err.Error())
+				}
+				rules[len(rules)-1].MaxAge = v
+			case "max_backups":
+				maxBackups := c.RemainingArgs()
+				if len(maxBackups) == 0 {
+					return nil, c.ArgErr()
+				}
+				v, err := strconv.Atoi(maxBackups[0])
+				if err != nil {
+					return nil, c.SyntaxErr("max_backups parse error" + err.Error())
+				}
+				rules[len(rules)-1].MaxBackups = v
+			case "max_size":
+				maxSize := c.RemainingArgs()
+				if len(maxSize) == 0 {
+					return nil, c.ArgErr()
+				}
+				v, err := strconv.Atoi(maxSize[0])
+				if err != nil {
+					return nil, c.SyntaxErr("max_size parse error" + err.Error())
+				}
+				rules[len(rules)-1].MaxSize = v
+
 			default:
 				return nil, c.ArgErr()
 			}

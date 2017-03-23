@@ -150,7 +150,7 @@ func (b *EngineBuilder) BuildClientSet(e *Engine) error {
 			return err
 		}
 
-		err = e.AddClient(ipnet, v.ClientSetId, v.ClientSetName, 1)
+		err = e.AddClientWL(ipnet, v.ClientSetId, v.ClientSetName, 1)
 		if err != nil {
 			b.Logger.Error("AddClientSetWL %v failed, %s", v, err)
 			return err
@@ -182,7 +182,7 @@ func (b *EngineBuilder) BuildNetLink(e *Engine) error {
 			return err
 		}
 
-		err = e.AddNetLink(ipnet, v.NetLinkId, v.Isp, v.Region, 1)
+		err = e.AddNetLinkWL(ipnet, v.NetLinkId, v.Isp, v.Region, 1)
 		if err != nil {
 			b.Logger.Error("AddNetLinkWL %v failed, %s", v, err)
 			return err
@@ -270,11 +270,7 @@ func (b *EngineBuilder) BuildDstView(e *Engine) error {
 
 func (b *EngineBuilder) BuildRoute(e *Engine) error {
 	for _, v := range b.RouteView {
-		ot, err := NewOutLink(v.OutlinkName, v.OutlinkAddr)
-		if err != nil {
-			b.Logger.Error("NewOutLink %v failed %s", v, err)
-			return err
-		}
+		ot := OutLink{v.OutlinkName, v.OutlinkAddr}
 
 		r := Route{
 			RouteKey: RouteKey{

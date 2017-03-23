@@ -109,8 +109,9 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 		case reply := <-out:
 			msgs.Append(reply)
 		case <-errChan:
+			continue
 		case <-t.C:
-			return
+			return msgs.Best()
 		}
 	}
 

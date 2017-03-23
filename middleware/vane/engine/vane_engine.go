@@ -45,6 +45,12 @@ func (v *VaneEngine) InitLogger() error {
 	return nil
 }
 
+func (v *VaneEngine) Stop() {
+	if v.E != nil && v.E.LinkManager != nil {
+		v.E.LinkManager.Stop()
+	}
+}
+
 func (v *VaneEngine) Reload() error {
 	builder := &EngineBuilder{DBName: v.DBName, Logger: v.Logger}
 	if err := builder.Load(); err != nil {
@@ -64,12 +70,6 @@ func (v *VaneEngine) Reload() error {
 		}
 	}
 
-	old := v.E
 	v.E = e
-
-	if old != nil {
-		go old.Stop()
-	}
-
 	return nil
 }

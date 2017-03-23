@@ -2,6 +2,7 @@ package vane
 
 import (
 	"errors"
+	"math"
 	"net"
 	"time"
 
@@ -86,10 +87,10 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	// Try get clientset_id from previous vane_engine middleware which has done this job.
 	// In case vane_engine doesn't do its duty, try here then
 	value = ctx.Value("clientset_id")
+	cip = state.GetRemoteAddr()
+	v.Logger.Debug("get remote client addr %v", cip)
 	clientSetID, ok = value.(int)
 	if !ok {
-		cip = state.GetRemoteAddr()
-		v.Logger.Debug("get remote client addr %v", cip)
 		if cip == nil {
 			clientSetID = engine.DefaultClientSetID
 		} else {
@@ -176,9 +177,9 @@ try_again:
 			continue
 		}
 
-		v.Logger.Debug("found retcode %d with bestrc for now %d", retcode, bestrc)
+		v.Logger.Debug("found retcode %d with bestrc cmp to current %d", retcode, bestrc)
 		if v.RcodePriority.PriorTo(retcode, bestrc) {
-			v.Logger.Debug("found better retcode: %d", bestrc)
+			v.Logger.Debug("found better retcode: %d", retcode)
 			v.Logger.Debug("it says: \n%v", replys)
 			bestrc = retcode
 			replyMsg = replys[0]
@@ -210,31 +211,46 @@ try_again:
 			}
 		}
 
-		if _, _, ok = rollback(clientSetID, domain); ok {
-			for _, rr := range rrset {
-				a := rr.(*dns.A)
-				netLinkID := e.GetNetLinkID(a.A)
-				routes := e.GetRoute(view.RouteSetID, domain.DmPoolID, netLinkID)
-				// If has route, we consider the result to be valid
-				if len(routes) == 0 {
+		bestRoutePrio := math.MaxInt32
+		for _, rr := range rrset {
+			a := rr.(*dns.A)
+			netLinkID := e.GetNetLinkID(a.A)
+			v.Logger.Debug("ip %s found netLinkID: %d", a.A, netLinkID)
+			routes := e.GetRoute(view.RouteSetID, domain.DmPoolID, netLinkID)
+			// If has route, we consider the result to be valid
+			if len(routes) == 0 && netLinkID != engine.DefaultNetLinkID {
+				v.Logger.Debug("no route found try default netlinkID instead")
+				routes = e.GetRoute(view.RouteSetID, domain.DmPoolID, engine.DefaultNetLinkID)
+			}
+
+			if len(routes) == 0 {
+				v.Logger.Debug("no route found", netLinkID)
+				continue
+			}
+
+			route := routes[0]
+
+			if domain.Monitor {
+				v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
+				status, ok := e.LinkManager.GetLink(a.String(), routes[0].OutLink.Addr)
+				if ok && status.Status == engine.LinkStatusDown {
+					v.Logger.Debug("%s dynamic monitor status down", a)
 					continue
 				}
-
-				if domain.Monitor {
-					v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
-				}
-
-				v.Logger.Debug("ip addr has been accepted %s for route", a.A)
-				a.Hdr.Name = q.Name
-				better = append(better, a)
 			}
-		} else {
-			for _, rr := range rrset {
-				a := rr.(*dns.A)
-				a.Hdr.Name = q.Name
-				v.Logger.Debug("ip addr has been accepted %s for last chance", a.A)
-				better = append(better, a)
+
+			if route.Priority < bestRoutePrio {
+				bestRoutePrio = route.Priority
+				better = better[:0]
 			}
+
+			if route.Priority > bestRoutePrio {
+				continue
+			}
+
+			v.Logger.Debug("ip addr %s has been accepted for %s", a.A, route.OutLink.Addr)
+			a.Hdr.Name = q.Name
+			better = append(better, a)
 		}
 
 		if len(better) == 0 {
@@ -266,14 +282,14 @@ try_again:
 	// 2. domain pool has falled back to default once and still got no good answer
 
 	//return the best effort answer we get
-	v.Logger.Warn("vane cannot find a good answer for clientset: %d dmpool: %d", clientSetID, domain.DmPoolID)
 	if replyMsg != nil {
+		v.Logger.Warn("vane cannot find a good answer for client: %v domain: %s", cip, q.Name)
 		w.WriteMsg(replyMsg)
-		return bestrc, nil
+		return 0, nil
 	}
 
 	//we tried our best but still got nothing
-	v.Logger.Error("vane cannot resolve any answer for clientset: %d dmpool: %d", clientSetID, domain.DmPoolID)
+	v.Logger.Error("vane cannot resolve any answer for client: %v domain: %s", cip, q.Name)
 	return dns.RcodeServerFailure, errUnreachable
 }
 
