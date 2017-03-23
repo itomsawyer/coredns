@@ -10,13 +10,12 @@ import (
 )
 
 type Viewer struct {
-	Id           int    `orm:"column(id);auto"`
-	ClientsetId  int    `orm:"column(clientset_id)"`
-	DomainPoolId int    `orm:"column(domain_pool_id)"`
-	RoutesetId   int    `orm:"column(routeset_id)"`
-	PolicyId     int    `orm:"column(policy_id)"`
-	Enable       int8   `orm:"column(enable)"`
-	Opr          string `orm:"column(opr);size(16)"`
+	Id           int  `orm:"column(id);auto"`
+	ClientsetId  int  `orm:"column(clientset_id)"`
+	DomainPoolId int  `orm:"column(domain_pool_id)"`
+	RoutesetId   int  `orm:"column(routeset_id)"`
+	PolicyId     int  `orm:"column(policy_id)"`
+	Enable       int8 `orm:"column(enable)"`
 }
 
 func (t *Viewer) TableName() string {

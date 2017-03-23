@@ -10,12 +10,11 @@ import (
 )
 
 type Domainlink struct {
-	Id           int    `orm:"column(id);auto"`
-	DomainPoolId int    `orm:"column(domain_pool_id)"`
-	NetlinkId    int    `orm:"column(netlink_id)"`
-	NetlinksetId int    `orm:"column(netlinkset_id)"`
-	Enable       int8   `orm:"column(enable)"`
-	Opr          string `orm:"column(opr);size(16)"`
+	Id           int  `orm:"column(id);auto"`
+	DomainPoolId int  `orm:"column(domain_pool_id)"`
+	NetlinkId    int  `orm:"column(netlink_id)"`
+	NetlinksetId int  `orm:"column(netlinkset_id)"`
+	Enable       int8 `orm:"column(enable)"`
 }
 
 func (t *Domainlink) TableName() string {
