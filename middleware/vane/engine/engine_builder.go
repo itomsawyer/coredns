@@ -270,11 +270,7 @@ func (b *EngineBuilder) BuildDstView(e *Engine) error {
 
 func (b *EngineBuilder) BuildRoute(e *Engine) error {
 	for _, v := range b.RouteView {
-		ot, err := NewOutLink(v.OutlinkName, v.OutlinkAddr)
-		if err != nil {
-			b.Logger.Error("NewOutLink %v failed %s", v, err)
-			return err
-		}
+		ot := OutLink{v.OutlinkName, v.OutlinkAddr}
 
 		r := Route{
 			RouteKey: RouteKey{

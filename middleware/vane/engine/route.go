@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"errors"
-	"net"
 	"sort"
 )
 
@@ -41,17 +39,11 @@ type RouteKey struct {
 
 type OutLink struct {
 	Name string
-	Addr net.IP
+	Addr string
 }
 
-func NewOutLink(name, ipaddr string) (o OutLink, err error) {
-	ip := net.ParseIP(ipaddr)
-	if ip == nil {
-		err = errors.New("Ip address format error")
-		return
-	}
-
-	return OutLink{Name: name, Addr: ip.To4()}, nil
+func NewOutLink(name, addr string) OutLink {
+	return OutLink{Name: name, Addr: addr}
 }
 
 type RouteSlice []Route

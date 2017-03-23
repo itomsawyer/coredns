@@ -45,6 +45,11 @@ func setup(c *caddy.Controller) error {
 		return err
 	})
 
+	c.OnShutdown(func() error {
+		vane.Stop()
+		return nil
+	})
+
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
 		vane.Next = next
 		return vane

@@ -15,12 +15,6 @@ import (
 	"supermq"
 )
 
-const (
-	LinkStatusUnknown = iota
-	LinkStatusUp
-	LinkStatusDown
-)
-
 var (
 	LogLevelDebug   = nsq.LogLevelDebug
 	LogLevelInfo    = nsq.LogLevelInfo

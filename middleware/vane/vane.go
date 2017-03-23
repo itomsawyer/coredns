@@ -226,6 +226,11 @@ try_again:
 
 				if domain.Monitor {
 					v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
+					status, ok := e.LinkManager.GetLink(a.String(), routes[0].OutLink.Addr)
+					if ok && status.Status == engine.LinkStatusDown {
+						v.Logger.Debug("%s dynamic monitor status down", a)
+						continue
+					}
 				}
 
 				v.Logger.Debug("ip addr has been accepted %s for route", a.A)

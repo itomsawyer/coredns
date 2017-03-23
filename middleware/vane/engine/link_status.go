@@ -9,6 +9,12 @@ type Dst2LNK struct {
 	OutLink string `json:"out_link"`
 }
 
+const (
+	LinkStatusUnknown = -1
+	LinkStatusDown    = 0
+	LinkStatusUp      = 1
+)
+
 type LinkStatus struct {
 	Dst2LNK
 	Status   int           `json:"status"`
