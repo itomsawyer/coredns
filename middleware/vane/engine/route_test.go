@@ -7,17 +7,8 @@ import (
 func TestAddRoute(t *testing.T) {
 	rm := RouteMap{}
 
-	ot1, err := NewOutLink("out1", "1.1.1.1")
-	if err != nil {
-		t.Errorf("unexpected error")
-		return
-	}
-
-	ot2, err := NewOutLink("out2", "1.1.1.2")
-	if err != nil {
-		t.Errorf("unexpected error")
-		return
-	}
+	ot1 := NewOutLink("out1", "1.1.1.1")
+	ot2 := NewOutLink("out2", "1.1.1.2")
 
 	r1 := NewRoute(1, 1, ot1)
 	r1.Score = 1

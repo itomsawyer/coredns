@@ -2,12 +2,10 @@ package engine
 
 import (
 	"sort"
-
-	"github.com/coredns/coredns/middleware/proxy"
 )
 
 type Upstreamer interface {
-	Select() []*proxy.UpstreamHost
+	Select() []*UpstreamHost
 	GetPolicy() Policy
 	Exchanger() Exchanger
 }
@@ -32,7 +30,7 @@ func (p *Upstream) GetPolicy() Policy {
 	return p.Policy(p.Hosts)
 }
 
-func (p *Upstream) AddHost(uh *proxy.UpstreamHost, priority int) {
+func (p *Upstream) AddHost(uh *UpstreamHost, priority int) {
 	p.Hosts.Add(uh, priority)
 	sort.Sort(p.Hosts)
 }
@@ -59,7 +57,7 @@ func (hp HostPool) Swap(i, j int) {
 	hp[i], hp[j] = hp[j], hp[i]
 }
 
-func (hp *HostPool) Add(uh *proxy.UpstreamHost, priority int) {
+func (hp *HostPool) Add(uh *UpstreamHost, priority int) {
 	if hp == nil {
 		*hp = make([]HostPoolEle, 0, 1)
 	}
@@ -70,5 +68,5 @@ func (hp *HostPool) Add(uh *proxy.UpstreamHost, priority int) {
 
 type HostPoolEle struct {
 	Priority int
-	Host     *proxy.UpstreamHost
+	Host     *UpstreamHost
 }

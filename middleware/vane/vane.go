@@ -180,7 +180,6 @@ try_again:
 		v.Logger.Debug("found retcode %d with bestrc cmp to current %d", retcode, bestrc)
 		if v.RcodePriority.PriorTo(retcode, bestrc) {
 			v.Logger.Debug("found better retcode: %d", retcode)
-			v.Logger.Debug("it says: \n%v", replys)
 			bestrc = retcode
 			replyMsg = replys[0]
 		}
@@ -259,9 +258,11 @@ try_again:
 		}
 
 		// we got answer, return
-		v.Logger.Debug("Rewrite Msg: %v\n", replyMsg)
 		replyMsg.Answer = better
-		v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
+
+		if v.Debug {
+			v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
+		}
 		w.WriteMsg(replyMsg)
 		return 0, nil
 	}

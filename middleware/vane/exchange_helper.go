@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/coredns/coredns/middleware/proxy"
 	"github.com/coredns/coredns/middleware/vane/engine"
 	"github.com/coredns/coredns/request"
 
@@ -15,11 +14,11 @@ import (
 
 type ExchangeHelper struct {
 	Upstream *engine.Upstream
-	Hosts    []*proxy.UpstreamHost
+	Hosts    []*engine.UpstreamHost
 	Timeout  time.Duration
 }
 
-func NewExchangeHelper(u *engine.Upstream, hosts []*proxy.UpstreamHost) *ExchangeHelper {
+func NewExchangeHelper(u *engine.Upstream, hosts []*engine.UpstreamHost) *ExchangeHelper {
 	return &ExchangeHelper{
 		Upstream: u,
 		Hosts:    hosts,
@@ -35,16 +34,15 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 		return nil, dns.RcodeServerFailure
 	}
 
-	ex := h.Upstream.Exchanger()
-	if ex == nil {
-		return nil, dns.RcodeServerFailure
+	if h.Timeout == 0 {
+		h.Timeout = defaultTimeout
 	}
 
 	if len(h.Hosts) == 1 {
 		uh := h.Hosts[0]
 
 		atomic.AddInt64(&uh.Conns, 1)
-		reply, backendErr := ex.Exchange(ctx, uh.Name, state)
+		reply, backendErr := uh.Exchange(ctx, uh.Name, state)
 		atomic.AddInt64(&uh.Conns, -1)
 
 		//XXX gaoxiang if uh.Fail() is needed? if vane should check upstream ldns
@@ -65,9 +63,9 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 
 	for i := 0; i < len(h.Hosts); i++ {
 		wg.Add(1)
-		go func(uh *proxy.UpstreamHost) {
+		go func(uh *engine.UpstreamHost) {
 			atomic.AddInt64(&uh.Conns, 1)
-			reply, backendErr := ex.Exchange(ctx, uh.Name, state)
+			reply, backendErr := uh.Exchange(ctx, uh.Name, state)
 			atomic.AddInt64(&uh.Conns, -1)
 
 			if backendErr == nil {
@@ -98,12 +96,7 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 		}()
 	}()
 
-	if h.Timeout == 0 {
-		h.Timeout = defaultTimeout
-	}
-
 	t := time.NewTimer(h.Timeout)
-
 	for cnt := 0; cnt < len(h.Hosts); cnt++ {
 		select {
 		case reply := <-out:
