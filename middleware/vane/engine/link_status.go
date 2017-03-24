@@ -10,9 +10,9 @@ type Dst2LNK struct {
 }
 
 const (
-	LinkStatusUnknown = -1
-	LinkStatusDown    = 0
-	LinkStatusUp      = 1
+	LinkStatusUnknown = iota
+	LinkStatusUp
+	LinkStatusDown
 )
 
 type LinkStatus struct {

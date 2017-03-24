@@ -6,17 +6,25 @@ import (
 )
 
 type MProducer struct {
-	pdChan chan *nsqlib.Producer
+	poller chan *nsqlib.Producer
+	pdlist []*nsqlib.Producer
 }
 
 func NewMProducer() *MProducer {
 	return &MProducer{
-		pdChan: make(chan *nsqlib.Producer, 10),
+		poller: make(chan *nsqlib.Producer, 10),
+		pdlist: make([]*nsqlib.Producer, 0, 10),
+	}
+}
+
+func (mp *MProducer) SetLogger(l logger, ll int) {
+	for _, p := range mp.pdlist {
+		p.SetLogger(l, nsqlib.LogLevel(ll))
 	}
 }
 
 func (mp *MProducer) Stop() {
-	for p := range mp.pdChan {
+	for _, p := range mp.pdlist {
 		p.Stop()
 	}
 }
@@ -30,19 +38,26 @@ func (m *MProducer) AddRx(addr string) error {
 	if err := w.Ping(); err != nil {
 		return err
 	}
-	m.pdChan <- w
+	m.pdlist = append(m.pdlist, w)
+	m.poller <- w
 	return nil
 }
 
 func (m *MProducer) MultiPublish(topic string, body [][]byte) (err error) {
-	for i := 0; i < len(m.pdChan); i++ {
-		onePder := <-m.pdChan
+	if len(m.pdlist) == 0 {
+		return fmt.Errorf("no available producer")
+	}
+
+	tryCount := 0
+	for onePder := range m.poller {
+		tryCount++
+		m.poller <- onePder
 		err = onePder.MultiPublish(topic, body)
-		m.pdChan <- onePder
 		if err == nil {
 			return
-		} else {
-			fmt.Printf("publish to %s failed, try next\n", onePder.String())
+		}
+		if tryCount > len(m.pdlist) {
+			break
 		}
 	}
 	return

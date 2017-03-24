@@ -46,12 +46,14 @@ func (v *VaneEngine) InitLogger() error {
 }
 
 func (v *VaneEngine) Stop() {
+	v.Logger.Info("vane engine stop")
 	if v.E != nil && v.E.LinkManager != nil {
 		v.E.LinkManager.Stop()
 	}
 }
 
 func (v *VaneEngine) Reload() error {
+	v.Logger.Info("vane engine load")
 	builder := &EngineBuilder{DBName: v.DBName, Logger: v.Logger}
 	if err := builder.Load(); err != nil {
 		return err
