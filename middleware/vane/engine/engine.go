@@ -7,7 +7,6 @@ import (
 	"github.com/coredns/coredns/middleware/pkg/dmtree"
 	"github.com/coredns/coredns/middleware/pkg/dnsutil"
 	"github.com/coredns/coredns/middleware/pkg/nettree"
-	"github.com/coredns/coredns/middleware/proxy"
 )
 
 var (
@@ -26,7 +25,7 @@ type Engine struct {
 	NetLinkWL   *nettree.NetTree
 	Domain      *dmtree.DmTree
 
-	UpstreamHosts map[string]*proxy.UpstreamHost
+	UpstreamHosts map[string]*UpstreamHost
 	Upstream      map[int]*Upstream
 
 	SrcView // <dmpoolid, clientsetid> => {Route, Upstream}
@@ -268,14 +267,14 @@ func (e *Engine) AddDomain(d Domain) error {
 	return e.Domain.Insert(d.Domain, d)
 }
 
-func (e *Engine) AddUpstreamHost(host string, unhealthy bool) (*proxy.UpstreamHost, error) {
+func (e *Engine) AddUpstreamHost(host string, unhealthy bool) (*UpstreamHost, error) {
 	h, err := dnsutil.ParseHostPort(host, "53")
 	if err != nil {
 		return nil, err
 	}
 
 	if e.UpstreamHosts == nil {
-		e.UpstreamHosts = make(map[string]*proxy.UpstreamHost, 8)
+		e.UpstreamHosts = make(map[string]*UpstreamHost, 8)
 	}
 
 	if uh, ok := e.UpstreamHosts[h]; ok {
@@ -283,7 +282,7 @@ func (e *Engine) AddUpstreamHost(host string, unhealthy bool) (*proxy.UpstreamHo
 		return uh, nil
 	}
 
-	uh := proxy.NewUpstreamHost(h)
+	uh := NewUpstreamHost(h)
 	if uh == nil {
 		return nil, errors.New("upsteam host (ldns) address format error")
 	}
@@ -320,7 +319,7 @@ func (e *Engine) GetUpstreamByID(policy int) (*Upstream, error) {
 	return u, nil
 }
 
-func (e *Engine) AttachUpstreamHost(policy int, host *proxy.UpstreamHost, priority int) error {
+func (e *Engine) AttachUpstreamHost(policy int, host *UpstreamHost, priority int) error {
 	upstream, err := e.GetUpstreamByID(policy)
 	if err != nil {
 		return err

@@ -1,11 +1,7 @@
 package engine
 
-import (
-	"github.com/coredns/coredns/middleware/proxy"
-)
-
 type Policy interface {
-	Select() []*proxy.UpstreamHost
+	Select() []*UpstreamHost
 }
 
 type PolicyBuilder func(HostPool) Policy
@@ -31,7 +27,7 @@ type SimplePolicy struct {
 }
 
 // Require HostPool to be sorted by priority
-func (p *SimplePolicy) Select() (uhs []*proxy.UpstreamHost) {
+func (p *SimplePolicy) Select() (uhs []*UpstreamHost) {
 	var i int
 
 	if p.cur < 0 || p.cur >= p.len {

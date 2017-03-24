@@ -9,9 +9,9 @@ import (
 func TestAddUpstream(t *testing.T) {
 	upstream := NewUpstream("test")
 
-	a := proxy.NewUpstreamHost("1.1.1.1")
-	b := proxy.NewUpstreamHost("1.1.1.2")
-	c := proxy.NewUpstreamHost("1.1.1.3")
+	a := NewUpstreamHost("1.1.1.1")
+	b := NewUpstreamHost("1.1.1.2")
+	c := NewUpstreamHost("1.1.1.3")
 
 	upstream.AddHost(b, 2)
 	upstream.AddHost(c, 3)
