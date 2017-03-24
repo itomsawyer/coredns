@@ -50,6 +50,15 @@ func TestErrorsParse(t *testing.T) {
 			MaxSize:    2,
 			MaxBackups: 3,
 		}},
+		{`errors errors.txt { 
+			max_backups 3
+			max_size 2
+		}`, false, errorHandler{
+			LogFile:    "errors.txt",
+			Debug:      false,
+			MaxSize:    2,
+			MaxBackups: 3,
+		}},
 	}
 
 	for i, test := range tests {

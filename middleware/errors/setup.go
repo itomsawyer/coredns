@@ -79,48 +79,55 @@ func setup(c *caddy.Controller) error {
 func errorsParse(c *caddy.Controller) (errorHandler, error) {
 	handler := errorHandler{}
 
-	optionalBlock := func() (bool, error) {
-		var hadBlock bool
+	for c.Next() {
+		args := c.RemainingArgs()
+
+		if len(args) > 0 {
+			if args[0] == "visible" {
+				handler.Debug = true
+			} else {
+				handler.LogFile = c.Val()
+			}
+		}
 
 		for c.NextBlock() {
-			hadBlock = true
-
 			switch c.Val() {
 			case "max_age":
 				maxAge := c.RemainingArgs()
 				if len(maxAge) == 0 {
-					return hadBlock, c.ArgErr()
+					return handler, c.ArgErr()
 				}
 				v, err := strconv.Atoi(maxAge[0])
 				if err != nil {
-					return hadBlock, c.SyntaxErr("max_age parse error" + err.Error())
+					return handler, c.SyntaxErr("max_age parse error" + err.Error())
 				}
 				handler.MaxAge = v
 			case "max_backups":
 				maxBackups := c.RemainingArgs()
 				if len(maxBackups) == 0 {
-					return hadBlock, c.ArgErr()
+					return handler, c.ArgErr()
 				}
 				v, err := strconv.Atoi(maxBackups[0])
 				if err != nil {
-					return hadBlock, c.SyntaxErr("max_backups parse error" + err.Error())
+					return handler, c.SyntaxErr("max_backups parse error" + err.Error())
 				}
 				handler.MaxBackups = v
 			case "max_size":
 				maxSize := c.RemainingArgs()
 				if len(maxSize) == 0 {
-					return hadBlock, c.ArgErr()
+					return handler, c.ArgErr()
 				}
 				v, err := strconv.Atoi(maxSize[0])
 				if err != nil {
-					return hadBlock, c.SyntaxErr("max_size parse error" + err.Error())
+					return handler, c.SyntaxErr("max_size parse error" + err.Error())
 				}
 				handler.MaxSize = v
 			case "log":
 				where := c.RemainingArgs()
 				if len(where) == 0 {
-					return hadBlock, c.ArgErr()
+					return handler, c.ArgErr()
 				}
+
 				if where[0] == "visible" {
 					handler.Debug = true
 				} else {
@@ -128,28 +135,7 @@ func errorsParse(c *caddy.Controller) (errorHandler, error) {
 				}
 
 			default:
-				return hadBlock, c.ArgErr()
-			}
-
-		}
-		return hadBlock, nil
-	}
-
-	for c.Next() {
-		// Configuration may be in a block
-		hadBlock, err := optionalBlock()
-		if err != nil {
-			return handler, err
-		}
-
-		// Otherwise, the only argument would be an error log file name or 'visible'
-		if !hadBlock {
-			if c.NextArg() {
-				if c.Val() == "visible" {
-					handler.Debug = true
-				} else {
-					handler.LogFile = c.Val()
-				}
+				return handler, c.ArgErr()
 			}
 		}
 	}
