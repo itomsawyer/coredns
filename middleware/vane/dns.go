@@ -34,6 +34,7 @@ func (p *RcodePriority) PriorTo(r1 int, r2 int) bool {
 
 func NewRcodePriority() *RcodePriority {
 	p := &RcodePriority{}
+	//Success is the best Rcode we expected
 	p.Set(dns.RcodeSuccess, 10)
 	p.Set(dns.RcodeNameError, 9)
 	p.Set(dns.RcodeNotImplemented, 8)
