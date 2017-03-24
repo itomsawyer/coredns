@@ -205,7 +205,9 @@ try_again:
 			rrlist := reply.Answer
 			for _, rr := range rrlist {
 				if a, ok := rr.(*dns.A); ok {
-					rrset.Add(a)
+					key := a.A.String()
+					v.Logger.Debug("Add A %s into rrset", key)
+					rrset.Add(key, a)
 				}
 			}
 		}
@@ -223,11 +225,12 @@ try_again:
 			}
 
 			if len(routes) == 0 {
-				v.Logger.Debug("no route found", netLinkID)
+				v.Logger.Debug("no route found")
 				continue
 			}
 
 			route := routes[0]
+			v.Logger.Debug("route found to outlink %s", route.OutLink.Addr)
 
 			if domain.Monitor {
 				v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
@@ -238,13 +241,13 @@ try_again:
 				}
 			}
 
+			if route.Priority > bestRoutePrio {
+				continue
+			}
+
 			if route.Priority < bestRoutePrio {
 				bestRoutePrio = route.Priority
 				better = better[:0]
-			}
-
-			if route.Priority > bestRoutePrio {
-				continue
 			}
 
 			v.Logger.Debug("ip addr %s has been accepted for %s", a.A, route.OutLink.Addr)

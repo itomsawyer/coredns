@@ -44,8 +44,8 @@ func NewRcodePriority() *RcodePriority {
 
 type rrSet map[string]dns.RR
 
-func (p rrSet) Add(a dns.RR) {
-	p[a.String()] = a
+func (p rrSet) Add(key string, a dns.RR) {
+	p[key] = a
 }
 
 func (p rrSet) Pack() []dns.RR {
