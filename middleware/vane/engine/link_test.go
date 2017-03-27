@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/astaxie/beego/logs"
 	"github.com/hashicorp/golang-lru"
 )
 
@@ -66,18 +67,22 @@ func TestLinkManagerSend(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if err := lm.RegisterSender([]string{"192.168.30.192:4150"}, "dst2otlnk"); err != nil {
+	//if err := lm.RegisterSender([]string{"192.168.29.246:4150"}, "dst2otlnk"); err != nil {
+	if err := lm.RegisterSender([]string{"127.0.0.1:4150"}, "dst2otlnk"); err != nil {
 		t.Error(err)
 		return
 	}
 
-	if err := lm.RegisterReader([]string{"192.168.30.192:4161"}, "dlresult", "channel"); err != nil {
+	//if err := lm.RegisterReader([]string{"192.168.29.246:4161"}, "dlresult", "channel"); err != nil {
+	if err := lm.RegisterReader([]string{"127.0.0.1:4161"}, "dlresult", "channel"); err != nil {
 		t.Error(err)
 		return
 	}
 
-	//for {
-	//	lm.GetLink("1.1.1.1", "ot1")
-	//	time.Sleep(1 * time.Second)
-	//}
+	lm.SetLogger(logs.NewLogger())
+
+	for {
+		lm.GetLink("192.168.29.247", "OFFICE-CT")
+		time.Sleep(1 * time.Second)
+	}
 }

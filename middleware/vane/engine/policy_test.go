@@ -3,8 +3,6 @@ package engine
 import (
 	"sort"
 	"testing"
-
-	"github.com/coredns/coredns/middleware/proxy"
 )
 
 func TestSimplePolicy(t *testing.T) {

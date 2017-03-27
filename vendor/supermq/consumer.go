@@ -14,6 +14,10 @@ func (t *Tconsumer) Stop() {
 	t.Consumer.Stop()
 }
 
+func (t *Tconsumer) SetLogger(l logger, ll int) {
+	t.Consumer.SetLogger(l, nsqlib.LogLevel(ll))
+}
+
 type Message struct {
 	*nsqlib.Message
 }

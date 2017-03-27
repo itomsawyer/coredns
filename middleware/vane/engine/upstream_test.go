@@ -2,8 +2,6 @@ package engine
 
 import (
 	"testing"
-
-	"github.com/coredns/coredns/middleware/proxy"
 )
 
 func TestAddUpstream(t *testing.T) {

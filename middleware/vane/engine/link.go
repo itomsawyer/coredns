@@ -47,12 +47,16 @@ func NewLinkManager(cap int) (*LinkManager, error) {
 		return nil, err
 	}
 
-	return &LinkManager{
+	lm := &LinkManager{
 		Cache:          c,
 		group:          new(singleflight.Group),
 		LinkUnknownTTL: 10 * time.Second,
 		LinkStatusTTL:  2 * time.Minute,
-	}, nil
+		logger:         logs.NewLogger(),
+	}
+
+	lm.logger.SetLevel(logs.LevelDebug)
+	return lm, nil
 }
 
 func (m *LinkManager) SetLogger(log *logs.BeeLogger) error {
@@ -89,6 +93,7 @@ func (m *LinkManager) RegisterSender(hosts []string, topic string) error {
 	for _, host := range hosts {
 		err := p.AddRx(host)
 		if err != nil {
+			m.logger.Error("Register sender %s to %s error: %s", topic, host, err.Error())
 			return err
 		}
 	}
@@ -102,10 +107,12 @@ func (m *LinkManager) RegisterSender(hosts []string, topic string) error {
 func (m *LinkManager) RegisterReader(hosts []string, topic, channel string) error {
 	c, err := supermq.NewTconsumer(topic, channel, m.handlerFunc())
 	if err != nil {
+		m.logger.Error("register reader %s:%s to %s error: %s", topic, channel, hosts, err.Error())
 		return err
 	}
 
 	if err := c.ConnectToNSQLookupds(hosts); err != nil {
+		m.logger.Error("register reader %s:%s to %s error: %s", topic, channel, hosts, err.Error())
 		return err
 	}
 
@@ -132,6 +139,7 @@ func (m *LinkManager) GetLink(dst, outlink string) (*LinkStatus, bool) {
 
 	v, ok := m.Cache.Get(ls.Dst2LNK)
 	if !ok {
+		m.logger.Debug("link %v not found", ls.Dst2LNK)
 		m.addTaskAndNotify(ls)
 		return nil, false
 	}
@@ -139,7 +147,7 @@ func (m *LinkManager) GetLink(dst, outlink string) (*LinkStatus, bool) {
 	ls = v.(*LinkStatus)
 	left, ok := ls.IsExpire(time.Now())
 	if ok {
-		m.logger.Debug("link %v expired: %s", ls, left)
+		m.logger.Debug("link %v expired: %s", ls.Dst2LNK, left)
 		m.Cache.Remove(ls.Dst2LNK)
 
 		m.addTaskAndNotify(ls)
@@ -147,7 +155,7 @@ func (m *LinkManager) GetLink(dst, outlink string) (*LinkStatus, bool) {
 	}
 
 	if left*2 < ls.TTL && ls.notified != true {
-		m.logger.Debug("link %v almost expired: %s", ls, left)
+		m.logger.Debug("link %v almost expired: %s", ls.Dst2LNK, left)
 		err := m.registerLink(ls)
 		if err == nil {
 			ls.notified = true
@@ -174,6 +182,7 @@ func (m *LinkManager) registerLink(ls *LinkStatus) error {
 			return nil, err
 		}
 
+		m.logger.Debug("register link: %s success", ls.Dst2LNK)
 		return nil, nil
 	})
 
@@ -183,10 +192,12 @@ func (m *LinkManager) registerLink(ls *LinkStatus) error {
 func (m *LinkManager) Stop() {
 	if m.sender != nil {
 		m.sender.Stop()
+		m.logger.Info("stop link manager sender")
 	}
 
 	if m.reader != nil {
 		m.reader.Stop()
+		m.logger.Info("stop link manager reader")
 	}
 }
 
@@ -211,20 +222,22 @@ func (c *LinkManagerConfig) CreateLinkManager() (*LinkManager, error) {
 
 	lm.LinkUnknownTTL = c.LinkUnknownTTL
 	lm.LinkStatusTTL = c.LinkStatusTTL
-	if err := lm.RegisterSender(c.sendHosts, c.SendTopic); err != nil {
-		return nil, err
-	}
-
-	if err := lm.RegisterReader(c.readHosts, c.ReadTopic, c.ReadChannel); err != nil {
-		return nil, err
-	}
-
 	if logger, err := CreateLogger(c.LogConfigs); err != nil {
 		return nil, err
 	} else {
 		if err := lm.SetLogger(logger); err != nil {
 			return nil, err
 		}
+	}
+
+	lm.logger.Info("Register sender %s to %v", c.SendTopic, c.sendHosts)
+	if err := lm.RegisterSender(c.sendHosts, c.SendTopic); err != nil {
+		return nil, err
+	}
+
+	lm.logger.Info("Register read %s:%s to %v", c.ReadTopic, c.ReadChannel, c.readHosts)
+	if err := lm.RegisterReader(c.readHosts, c.ReadTopic, c.ReadChannel); err != nil {
+		return nil, err
 	}
 
 	return lm, nil
