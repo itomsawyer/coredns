@@ -107,12 +107,12 @@ func (m *LinkManager) RegisterSender(hosts []string, topic string) error {
 func (m *LinkManager) RegisterReader(hosts []string, topic, channel string) error {
 	c, err := supermq.NewTconsumer(topic, channel, m.handlerFunc())
 	if err != nil {
-		m.logger.Error("register reader %s:%s to %s error: %s", topic, channel, hosts, err.Error())
+		m.logger.Error("Register reader %s:%s to %s error: %s", topic, channel, hosts, err.Error())
 		return err
 	}
 
 	if err := c.ConnectToNSQLookupds(hosts); err != nil {
-		m.logger.Error("register reader %s:%s to %s error: %s", topic, channel, hosts, err.Error())
+		m.logger.Error("Register reader %s:%s to %s error: %s", topic, channel, hosts, err.Error())
 		return err
 	}
 
@@ -162,6 +162,7 @@ func (m *LinkManager) GetLink(dst, outlink string) (*LinkStatus, bool) {
 		}
 	}
 
+	m.logger.Debug("link found %v", ls)
 	return ls, true
 }
 

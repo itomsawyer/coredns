@@ -107,6 +107,7 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	if err != nil {
 		domain = engine.DefaultDomainPool
 	}
+	origDomain := domain
 
 	v.Logger.Debug("query domain %s", q.Name)
 	v.Logger.Debug("get domain pool id: %d", domain.DmPoolID)
@@ -232,9 +233,9 @@ try_again:
 			route := routes[0]
 			v.Logger.Debug("route found to outlink %s", route.OutLink.Addr)
 
-			if domain.Monitor {
+			if origDomain.Monitor {
 				v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
-				status, ok := e.LinkManager.GetLink(a.String(), routes[0].OutLink.Addr)
+				status, ok := e.LinkManager.GetLink(a.A.String(), routes[0].OutLink.Addr)
 				if ok && status.Status == engine.LinkStatusDown {
 					v.Logger.Debug("%s dynamic monitor status down", a)
 					continue

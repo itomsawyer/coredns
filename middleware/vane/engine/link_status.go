@@ -9,22 +9,26 @@ type Dst2LNK struct {
 	OutLink string `json:"out_link"`
 }
 
+type Stat int
+
 const (
-	LinkStatusUnknown = iota
+	LinkStatusUnknown Stat = iota
 	LinkStatusUp
 	LinkStatusDown
 )
 
 type LinkStatus struct {
+	Key string `json: "key"`
 	Dst2LNK
-	Status   int           `json:"status"`
+	Status   Stat          `json:"status"`
 	TTL      time.Duration `json:"-"`
 	stored   time.Time
 	notified bool
 }
 
-func NewLinkStatus(dst, outlink string, status int) *LinkStatus {
+func NewLinkStatus(dst, outlink string, status Stat) *LinkStatus {
 	return &LinkStatus{
+		Key: dst + outlink,
 		Dst2LNK: Dst2LNK{
 			DstIP:   dst,
 			OutLink: outlink,
