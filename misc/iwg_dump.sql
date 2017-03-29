@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 5.7.17, for macos10.12 (x86_64)
+-- MySQL dump 10.13  Distrib 5.6.35, for Linux (x86_64)
 --
 -- Host: localhost    Database: iwg
 -- ------------------------------------------------------
@@ -516,6 +516,62 @@ INSERT INTO `ldns` VALUES (1,'default','223.5.5.5','A',1,0);
 UNLOCK TABLES;
 
 --
+-- Table structure for table `natlink`
+--
+
+DROP TABLE IF EXISTS `natlink`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `natlink` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `outlink_id` int(11) DEFAULT NULL,
+  `natserver_id` int(11) DEFAULT NULL,
+  `addr` varchar(255) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `outlink_id` (`outlink_id`),
+  KEY `natserver_id` (`natserver_id`),
+  CONSTRAINT `natlink_ibfk_1` FOREIGN KEY (`outlink_id`) REFERENCES `outlink` (`id`),
+  CONSTRAINT `natlink_ibfk_2` FOREIGN KEY (`natserver_id`) REFERENCES `natserver` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='outlink on specific nat server';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `natlink`
+--
+
+LOCK TABLES `natlink` WRITE;
+/*!40000 ALTER TABLE `natlink` DISABLE KEYS */;
+/*!40000 ALTER TABLE `natlink` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `natserver`
+--
+
+DROP TABLE IF EXISTS `natserver`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `natserver` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(127) NOT NULL,
+  `addr` varchar(127) NOT NULL,
+  `enable` tinyint(1) NOT NULL DEFAULT '1',
+  `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'if other than zero, outlink is unavailable, each bit indicate different reason',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='nat server';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `natserver`
+--
+
+LOCK TABLES `natserver` WRITE;
+/*!40000 ALTER TABLE `natserver` DISABLE KEYS */;
+/*!40000 ALTER TABLE `natserver` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `netlink`
 --
 
@@ -666,6 +722,22 @@ LOCK TABLES `outlink` WRITE;
 INSERT INTO `outlink` VALUES (1,'default','0.0.0.0','normal',1,0);
 /*!40000 ALTER TABLE `outlink` ENABLE KEYS */;
 UNLOCK TABLES;
+
+--
+-- Temporary view structure for view `outlink_view`
+--
+
+DROP TABLE IF EXISTS `outlink_view`;
+/*!50001 DROP VIEW IF EXISTS `outlink_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `outlink_view` AS SELECT 
+ 1 AS `outlink_id`,
+ 1 AS `outlink_addr`,
+ 1 AS `natlink_addr`,
+ 1 AS `natserver_id`,
+ 1 AS `nat_name`*/;
+SET character_set_client = @saved_cs_client;
 
 --
 -- Table structure for table `policy`
@@ -1090,6 +1162,24 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
+-- Final view structure for view `outlink_view`
+--
+
+/*!50001 DROP VIEW IF EXISTS `outlink_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+/*!50001 SET collation_connection      = utf8_general_ci */;
+/*!50001 CREATE ALGORITHM=MERGE */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `outlink_view` AS select `natlink`.`outlink_id` AS `outlink_id`,`outlink`.`addr` AS `outlink_addr`,`natlink`.`addr` AS `natlink_addr`,`natlink`.`natserver_id` AS `natserver_id`,`natserver`.`name` AS `nat_name` from ((`outlink` join `natlink`) join `natserver`) where ((`natlink`.`natserver_id` = `natserver`.`id`) and (`natlink`.`outlink_id` = `outlink`.`id`) and (`natserver`.`enable` = 1) and (`natserver`.`unavailable` = 0)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
 -- Final view structure for view `policy_view`
 --
 
@@ -1152,4 +1242,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-22 17:49:30
+-- Dump completed on 2017-03-29 12:39:55
