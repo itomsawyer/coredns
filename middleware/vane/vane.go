@@ -83,6 +83,7 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	if !ok || e == nil {
 		return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
 	}
+	v.Logger.Debug("query domain %s", q.Name)
 
 	// Try get clientset_id from previous vane_engine middleware which has done this job.
 	// In case vane_engine doesn't do its duty, try here then
@@ -109,10 +110,9 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	}
 	origDomain := domain
 
-	v.Logger.Debug("query domain %s", q.Name)
-	v.Logger.Debug("get domain pool id: %d", domain.DmPoolID)
-
 try_again:
+	v.Logger.Debug("use clientset_id : %d", clientSetID)
+	v.Logger.Debug("use domain pool id: %d", domain.DmPoolID)
 
 	view, err := e.GetView(clientSetID, domain.DmPoolID)
 	if err != nil {
@@ -120,6 +120,7 @@ try_again:
 			goto try_again
 		}
 
+		v.Logger.Warn("view not found")
 		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
@@ -130,6 +131,7 @@ try_again:
 			goto try_again
 		}
 
+		v.Logger.Warn("view upstream not found")
 		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
@@ -140,6 +142,7 @@ try_again:
 			goto try_again
 		}
 
+		v.Logger.Warn("view hosts policy not found")
 		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
@@ -282,19 +285,27 @@ try_again:
 		goto try_again
 	}
 
-	// TODO WARNING MUST be sent when we get here
-	// 1. replyMsg is not nil , bestrc is dns.RcodeSuccess: we filtered all of ip addr. At least, give out one answer
+	// WARNING MUST be sent when we get here
+	// 1. replyMsg is not nil , bestrc is dns.RcodeSuccess: we discard all of ip addr.
 	// 2. domain pool has falled back to default once and still got no good answer
-
-	//return the best effort answer we get
 	if replyMsg != nil {
+		if bestrc != dns.RcodeSuccess {
+			//return the best effort answer we get
+			w.WriteMsg(replyMsg)
+			return 0, nil
+		}
+
+		// bestrc == dns.RcodeSuccess indicate that we got NOERROR response
+		// but no A record we want to pick, just keep slient to the client
 		v.Logger.Warn("vane cannot find a good answer for client: %v domain: %s", cip, q.Name)
+		replyMsg.Answer = nil
+		replyMsg.Ns = nil
 		w.WriteMsg(replyMsg)
 		return 0, nil
 	}
 
 	//we tried our best but still got nothing
-	v.Logger.Error("vane cannot resolve any answer for client: %v domain: %s", cip, q.Name)
+	v.Logger.Warn("vane cannot resolve any answer for client: %v domain: %s", cip, q.Name)
 	return dns.RcodeServerFailure, errUnreachable
 }
 
