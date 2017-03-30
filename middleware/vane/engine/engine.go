@@ -11,9 +11,11 @@ import (
 
 var (
 	DefaultClientSetID  = 1
+	DefaultClientSet    = ClientSet{ID: 1, Name: "default"}
 	DefaultDomainPoolID = 1
-	DefaultDomainPool   = Domain{ID: 0, Domain: ".", DmPoolID: 1, DmPool: "default", Monitor: false}
+	DefaultDomainPool   = Domain{Domain: ".", DmPoolID: 1, DmPool: "default", Monitor: false}
 	DefaultNetLinkID    = 1
+	DefaultNetLink      = NetLink{ID: 1, Isp: "default", Region: "default"}
 
 	ErrDuplicateUpstream = errors.New("Duplicate upstream (policy)")
 )
@@ -47,6 +49,29 @@ func (e *Engine) GetClientSetID(ip net.IP) (clientset_id int) {
 	}
 
 	return DefaultClientSetID
+}
+
+func (e *Engine) GetClientSets(ip net.IP) (cs []ClientSet) {
+	if ip == nil {
+		return nil
+	}
+
+	if e.ClientSetWL != nil {
+		v := e.ClientSetWL.FindByIP(ip)
+		if v != nil {
+			cs = append(cs, v.(ClientSet))
+		}
+	}
+
+	if e.ClientSet != nil {
+		v := e.ClientSet.FindByIP(ip)
+		if v != nil {
+			cs = append(cs, v.(ClientSet))
+		}
+	}
+
+	cs = append(cs, DefaultClientSet)
+	return
 }
 
 func (e *Engine) GetClientSet(ip net.IP) (ClientSet, error) {
@@ -84,6 +109,29 @@ func (e *Engine) GetNetLinkID(ip net.IP) int {
 	}
 
 	return nl.ID
+}
+
+func (e *Engine) GetNetLinks(ip net.IP) (nls []NetLink) {
+	if ip == nil {
+		return nil
+	}
+
+	if e.NetLinkWL != nil {
+		v := e.NetLinkWL.FindByIP(ip)
+		if v != nil {
+			nls = append(nls, v.(NetLink))
+		}
+	}
+
+	if e.NetLink != nil {
+		v := e.NetLink.FindByIP(ip)
+		if v != nil {
+			nls = append(nls, v.(NetLink))
+		}
+	}
+
+	nls = append(nls, DefaultNetLink)
+	return
 }
 
 func (e *Engine) GetNetLink(ip net.IP) (NetLink, error) {
