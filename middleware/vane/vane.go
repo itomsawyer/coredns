@@ -170,6 +170,7 @@ try_again:
 		// Send dns query to every upstreamhost in uphosts, combine their response into slice replys
 		v.Logger.Debug("set upstream timeout: %s", v.UpstreamTimeout)
 		ex.Hosts = uphosts
+		ex.Timeout = v.UpstreamTimeout
 		replys, retcode = ex.DoExchange(ctx, state)
 		if v.Debug {
 			for _, r := range replys {

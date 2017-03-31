@@ -38,23 +38,6 @@ func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) 
 		h.Timeout = defaultTimeout
 	}
 
-	if len(h.Hosts) == 1 {
-		uh := h.Hosts[0]
-
-		atomic.AddInt64(&uh.Conns, 1)
-		reply, backendErr := uh.Exchange(ctx, uh.Name, state)
-		atomic.AddInt64(&uh.Conns, -1)
-
-		//XXX gaoxiang if uh.Fail() is needed? if vane should check upstream ldns
-		//    with gwCheck is working
-		if backendErr != nil {
-			//uh.Fail()
-			return nil, dns.RcodeServerFailure
-		}
-
-		return []*dns.Msg{reply}, reply.Rcode
-	}
-
 	msgs := MsgSlice{}
 	out := make(chan *dns.Msg)
 	errChan := make(chan error)
