@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"net"
 
 	"github.com/coredns/coredns/core/dnsserver"
 	"github.com/coredns/coredns/middleware"
@@ -31,7 +32,7 @@ func setup(c *caddy.Controller) error {
 	})
 
 	c.OnStartup(func() (err error) {
-		err = vane.InitLogger()
+		err = vane.Init()
 		return err
 	})
 
@@ -60,7 +61,8 @@ func setup(c *caddy.Controller) error {
 
 func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 	vane = &VaneEngine{
-		DBHost: "root:@localhost/iwg",
+		DBHost:  "root:@localhost/iwg",
+		CtlHost: "127.0.0.1:9053",
 	}
 
 	for c.Next() {
@@ -79,6 +81,17 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 					}
 
 					vane.DBHost = args[0]
+
+				case "ctl_host":
+					args := c.RemainingArgs()
+					if len(args) != 1 {
+						return nil, c.ArgErr()
+					}
+					vane.CtlHost = args[0]
+					_, _, err := net.SplitHostPort(vane.CtlHost)
+					if err != nil {
+						return nil, c.SyntaxErr(err.Error())
+					}
 
 				case "log":
 					lc, err := ParseLogConfig(c)
