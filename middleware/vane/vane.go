@@ -219,14 +219,16 @@ try_again:
 
 		bestRoutePrio := math.MaxInt32
 		for _, rr := range rrset {
+			var routes engine.RouteSlice
 			a := rr.(*dns.A)
-			netLinkID := e.GetNetLinkID(a.A)
-			v.Logger.Debug("ip %s found netLinkID: %d", a.A, netLinkID)
-			routes := e.GetRoute(view.RouteSetID, domain.DmPoolID, netLinkID)
-			// If has route, we consider the result to be valid
-			if len(routes) == 0 && netLinkID != engine.DefaultNetLinkID {
-				v.Logger.Debug("no route found try default netlinkID instead")
-				routes = e.GetRoute(view.RouteSetID, domain.DmPoolID, engine.DefaultNetLinkID)
+			netlinks := e.GetNetLinks(a.A)
+			v.Logger.Debug("ip %s found netLink: %v", a.A, netlinks)
+
+			for _, nl := range netlinks {
+				routes = e.GetRoute(view.RouteSetID, domain.DmPoolID, nl.ID)
+				if len(routes) > 0 {
+					break
+				}
 			}
 
 			if len(routes) == 0 {
@@ -239,7 +241,7 @@ try_again:
 
 			if origDomain.Monitor {
 				v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
-				status, ok := e.LinkManager.GetLink(a.A.String(), routes[0].OutLink.Addr)
+				status, ok := e.GetLink(a.A.String(), routes[0].OutLink.Addr)
 				if ok && status.Status == engine.LinkStatusDown {
 					v.Logger.Debug("%s dynamic monitor status down", a)
 					continue

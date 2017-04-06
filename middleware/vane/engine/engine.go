@@ -367,6 +367,14 @@ func (e *Engine) GetUpstreamByID(policy int) (*Upstream, error) {
 	return u, nil
 }
 
+func (e *Engine) GetLink(dst, outlink string) (*LinkStatus, bool) {
+	if e.LinkManager == nil {
+		return nil, false
+	}
+
+	return e.LinkManager.GetLink(dst, outlink)
+}
+
 func (e *Engine) AttachUpstreamHost(policy int, host *UpstreamHost, priority int) error {
 	upstream, err := e.GetUpstreamByID(policy)
 	if err != nil {
