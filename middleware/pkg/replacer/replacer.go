@@ -63,6 +63,8 @@ func New(r *dns.Msg, rr *dnsrecorder.Recorder, emptyValue string) Replacer {
 		if rcode == "" {
 			rcode = strconv.Itoa(rr.Rcode)
 		}
+
+		rep.replacements["{answer}"] = strings.Join(rr.GetResponseSummaryText(), ",")
 		rep.replacements["{rcode}"] = rcode
 		rep.replacements["{rsize}"] = strconv.Itoa(rr.Len)
 		rep.replacements["{duration}"] = time.Since(rr.Start).String()
