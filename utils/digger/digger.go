@@ -76,7 +76,7 @@ func main() {
 		}
 
 		records := ResponseSummaryText(in)
-		fmt.Printf("%s %s %s %d %s\n", dm, records.String(), rtt, rtt, ret)
+		fmt.Fprintf(o, "%s %s %s %d %s\n", dm, records.String(), rtt, rtt, ret)
 	}
 }
 
