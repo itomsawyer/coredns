@@ -206,13 +206,20 @@ try_again:
 		// better is the result set of all A that pass the filter with Route
 		better := make([]dns.RR, 0, 4)
 		rrset := rrSet{}
+		cnameSet := rrSet{}
 		for _, reply := range replys {
 			rrlist := reply.Answer
 			for _, rr := range rrlist {
-				if a, ok := rr.(*dns.A); ok {
-					key := a.A.String()
+				switch r := rr.(type) {
+				case (*dns.A):
+					key := r.A.String()
 					v.Logger.Debug("Add A %s into rrset", key)
-					rrset.Add(key, a)
+					rrset.Add(key, r)
+				case (*dns.CNAME):
+					key := r.Hdr.Name
+					v.Logger.Debug("Add CNAME %s -> %s into cnameset", key, r.Target)
+					cnameSet.Add(key, r)
+				default:
 				}
 			}
 		}
@@ -268,7 +275,11 @@ try_again:
 		}
 
 		// we got answer, return
-		replyMsg.Answer = better
+		if cnameSlice := cnameSet.ToSlice(); len(cnameSlice) != 0 {
+			replyMsg.Answer = append(cnameSlice, better...)
+		} else {
+			replyMsg.Answer = better
+		}
 
 		if v.Debug {
 			v.Logger.Debug("Write anwser to client: \n%v", replyMsg)

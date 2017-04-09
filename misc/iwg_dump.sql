@@ -1,4 +1,4 @@
--- MySQL dump 10.13  Distrib 5.6.35, for Linux (x86_64)
+-- MySQL dump 10.13  Distrib 5.7.17, for macos10.12 (x86_64)
 --
 -- Host: localhost    Database: iwg
 -- ------------------------------------------------------
@@ -526,6 +526,8 @@ CREATE TABLE `natlink` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `outlink_id` int(11) DEFAULT NULL,
   `natserver_id` int(11) DEFAULT NULL,
+  `status` tinyint(1) NOT NULL DEFAULT '1',
+  `gw` varchar(126) NOT NULL,
   `addr` varchar(255) NOT NULL,
   PRIMARY KEY (`id`),
   KEY `outlink_id` (`outlink_id`),
@@ -736,7 +738,9 @@ SET character_set_client = utf8;
  1 AS `outlink_addr`,
  1 AS `natlink_addr`,
  1 AS `natserver_id`,
- 1 AS `nat_name`*/;
+ 1 AS `nat_name`,
+ 1 AS `natlink_gw`,
+ 1 AS `natlink_status`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -1174,7 +1178,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `outlink_view` AS select `natlink`.`outlink_id` AS `outlink_id`,`outlink`.`addr` AS `outlink_addr`,`natlink`.`addr` AS `natlink_addr`,`natlink`.`natserver_id` AS `natserver_id`,`natserver`.`name` AS `nat_name` from ((`outlink` join `natlink`) join `natserver`) where ((`natlink`.`natserver_id` = `natserver`.`id`) and (`natlink`.`outlink_id` = `outlink`.`id`) and (`natserver`.`enable` = 1) and (`natserver`.`unavailable` = 0)) */;
+/*!50001 VIEW `outlink_view` AS select `natlink`.`outlink_id` AS `outlink_id`,`outlink`.`addr` AS `outlink_addr`,`natlink`.`addr` AS `natlink_addr`,`natlink`.`natserver_id` AS `natserver_id`,`natserver`.`name` AS `nat_name`,`natlink`.`gw` AS `natlink_gw`,`natlink`.`status` AS `natlink_status` from ((`outlink` join `natlink`) join `natserver`) where ((`natlink`.`natserver_id` = `natserver`.`id`) and (`natlink`.`outlink_id` = `outlink`.`id`) and (`natserver`.`enable` = 1) and (`natserver`.`unavailable` = 0)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1242,4 +1246,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-03-29 12:39:55
+-- Dump completed on 2017-04-09 15:01:05

@@ -124,6 +124,8 @@ create table natlink (
 id int not null auto_increment,
 outlink_id int,
 natserver_id int,
+status bool not null default true,
+gw varchar(126) not null,
 addr varchar(255) not null,
 primary key(id),
 foreign key(outlink_id) references outlink(id) on delete restrict,
@@ -470,7 +472,7 @@ and outlink.enable = true and route.enable = true and outlink.unavailable = 0 an
 group by routeset_id, netlinkset_id;
 
 create ALGORITHM = MERGE view outlink_view as
-select outlink_id,outlink.addr as outlink_addr ,natlink.addr as natlink_addr, natserver_id, natserver.name as nat_name
+select outlink_id,outlink.addr as outlink_addr ,natlink.addr as natlink_addr, natserver_id, natserver.name as nat_name,natlink.gw as natlink_gw, natlink.status as natlink_status
 from outlink,natlink,natserver
 where natlink.natserver_id = natserver.id and natlink.outlink_id = outlink.id and natserver.enable =true and natserver.unavailable = 0;
 

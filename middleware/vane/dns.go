@@ -49,7 +49,7 @@ func (p rrSet) Add(key string, a dns.RR) {
 	p[key] = a
 }
 
-func (p rrSet) Pack() []dns.RR {
+func (p rrSet) ToSlice() []dns.RR {
 	if len(p) == 0 {
 		return nil
 	}
