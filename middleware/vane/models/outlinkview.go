@@ -10,12 +10,14 @@ import (
 )
 
 type Outlinkview struct {
-	Id          int64 `orm:"auto"`
-	OutlinkId   int
-	NatlinkAddr string `orm:"size(128)"`
-	OutlinkAddr string `orm:"size(128)"`
-	NatserverId int
-	NatName     string `orm:"size(128)"`
+	Id            int64 `orm:"auto"`
+	OutlinkId     int
+	NatlinkAddr   string `orm:"size(128)"`
+	NatlinkGw     string `orm:"size(128)"`
+	NatlinkStatus int
+	OutlinkAddr   string `orm:"size(128)"`
+	NatserverId   int
+	NatName       string `orm:"size(128)"`
 }
 
 func init() {
