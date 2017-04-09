@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/middleware/pkg/dnsrecorder"
+	"github.com/coredns/coredns/middleware/pkg/edns"
 	"github.com/coredns/coredns/request"
 
 	"github.com/miekg/dns"
@@ -32,11 +33,19 @@ type replacer struct {
 // available. emptyValue should be the string that is used
 // in place of empty string (can still be empty string).
 func New(r *dns.Msg, rr *dnsrecorder.Recorder, emptyValue string) Replacer {
+	var subnet string
+
+	if ecs := edns.ReadClientSubnet(r); ecs != nil {
+		subnet = ecs.Address.String() + "/" + strconv.Itoa(int(ecs.SourceNetmask))
+	} else {
+		subnet = "-"
+	}
+
 	req := request.Request{W: rr, Req: r}
 	rep := replacer{
 		replacements: map[string]string{
 			"{type}":  req.Type(),
-			"{ecs}":   req.GetRemoteAddr().String(),
+			"{ecs}":   subnet,
 			"{name}":  req.Name(),
 			"{class}": req.Class(),
 			"{proto}": req.Proto(),
@@ -54,6 +63,8 @@ func New(r *dns.Msg, rr *dnsrecorder.Recorder, emptyValue string) Replacer {
 		if rcode == "" {
 			rcode = strconv.Itoa(rr.Rcode)
 		}
+
+		rep.replacements["{answer}"] = strings.Join(rr.GetResponseSummaryText(), ",")
 		rep.replacements["{rcode}"] = rcode
 		rep.replacements["{rsize}"] = strconv.Itoa(rr.Len)
 		rep.replacements["{duration}"] = time.Since(rr.Start).String()

@@ -62,6 +62,7 @@ The following place holders are supported:
 * `{proto}`: protocol used (tcp or udp).
 * `{when}`: time of the query.
 * `{remote}`: client's IP address.
+* `{ecs}`: client subnet IP address if ecs OPT record exist.
 * `{size}`: request size in bytes.
 * `{port}`: client's port.
 * `{duration}`: response duration.
@@ -71,11 +72,12 @@ The following place holders are supported:
 * `{>opcode}`: query OPCODE.
 * `{rcode}`: response RCODE.
 * `{rsize}`: response size.
+* `{answer}`: response text summary.
 
 The default Common Log Format is:
 
 ~~~ txt
-`{remote} - [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {rsize} {duration}`
+`{remote} {ecs} - [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {rsize} {duration} {answer}`
 ~~~
 
 ## Examples

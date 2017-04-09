@@ -89,7 +89,7 @@ func (v *VaneEngine) Init() error {
 func (v *VaneEngine) ReloadHandler(w http.ResponseWriter, r *http.Request) {
 	err := v.Reload()
 	if err != nil {
-		fmt.Fprintf(w, "%s\n", err)
+		fmt.Fprintf(w, "ERR %s\n", err)
 	} else {
 		fmt.Fprintf(w, "OK\n")
 	}

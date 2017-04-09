@@ -83,7 +83,7 @@ const (
 	// DefaultLogFilename is the default log filename.
 	DefaultLogFilename = "query.log"
 	// CommonLogFormat is the common log format.
-	CommonLogFormat = `{remote} {ecs} ` + CommonLogEmptyValue + ` [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {rsize} {duration}`
+	CommonLogFormat = `{remote} {ecs} ` + CommonLogEmptyValue + ` [{when}] "{type} {class} {name} {proto} {size} {>do} {>bufsize}" {rcode} {rsize} {duration} {answer}`
 	// CommonLogEmptyValue is the common empty log value.
 	CommonLogEmptyValue = "-"
 	// CombinedLogFormat is the combined log format.

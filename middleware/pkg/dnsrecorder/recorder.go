@@ -35,6 +35,33 @@ func New(w dns.ResponseWriter) *Recorder {
 
 // WriteMsg records the status code and calls the
 // underlying ResponseWriter's WriteMsg method.
+
+func (r *Recorder) GetResponseSummary() (ans []dns.RR) {
+	for _, v := range r.Msg.Answer {
+		switch rr := v.(type) {
+		case *dns.A:
+			ans = append(ans, rr)
+		case *dns.CNAME:
+			ans = append(ans, rr)
+		}
+	}
+
+	return
+}
+
+func (r *Recorder) GetResponseSummaryText() (ans []string) {
+	for _, v := range r.Msg.Answer {
+		switch rr := v.(type) {
+		case *dns.A:
+			ans = append(ans, rr.A.String())
+		case *dns.CNAME:
+			ans = append(ans, rr.Target)
+		}
+	}
+
+	return
+}
+
 func (r *Recorder) WriteMsg(res *dns.Msg) error {
 	r.Rcode = res.Rcode
 	// We may get called multiple times (axfr for instance).
