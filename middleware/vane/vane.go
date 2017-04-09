@@ -62,12 +62,17 @@ func (v *Vane) Name() string { return "vane" }
 
 func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
-		cip             net.IP
-		i, clientSetID  int
+		cip net.IP
+		i   int
+		//clientSetID  int
 		ok              bool
 		replyMsg        *dns.Msg
 		replys          []*dns.Msg
+		clientSets      []engine.ClientSet
 		retcode, bestrc int
+		view            engine.View
+		policy          engine.Policy
+		err             error
 	)
 
 	if len(r.Question) == 0 {
@@ -87,21 +92,29 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 
 	// Try get clientset_id from previous vane_engine middleware which has done this job.
 	// In case vane_engine doesn't do its duty, try here then
-	value = ctx.Value("clientset_id")
+	value = ctx.Value("clientsets")
 	cip = state.GetRemoteAddr()
 	v.Logger.Debug("get remote client addr %v", cip)
-	clientSetID, ok = value.(int)
+	clientSets, ok = value.([]engine.ClientSet)
 	if !ok {
 		if cip == nil {
-			clientSetID = engine.DefaultClientSetID
+			clientSets = []engine.ClientSet{engine.DefaultClientSet}
 		} else {
-			clientSetID = e.GetClientSetID(cip)
+			clientSets = e.GetClientSets(cip)
 		}
 
-		v.Logger.Debug("fetch clientset_id from request: %v", clientSetID)
+		v.Logger.Debug("fetch clientsets from request: %v", clientSets)
 	} else {
-		v.Logger.Debug("fetch clientset_id from vane_engine: %v", clientSetID)
+		v.Logger.Debug("fetch clientsets from vane_engine: %v", clientSets)
 	}
+
+	if len(clientSets) == 0 {
+		v.Logger.Warn("clientSets not found")
+		return dns.RcodeServerFailure, errUnexpectedLogic
+	}
+
+	v.Logger.Debug("use clientsets: %v", clientSets)
+	//clientSetID = clientSets[0].ID
 
 	// Get domainpool_id , if not found e.GetDomainPoolID return engine.DefaultDomainPoolID
 	domain, err := e.GetDomain(q.Name)
@@ -111,38 +124,36 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	origDomain := domain
 
 try_again:
-	v.Logger.Debug("use clientset_id : %d", clientSetID)
+	//v.Logger.Debug("use clientset_id : %d", clientSetID)
 	v.Logger.Debug("use domain pool id: %d", domain.DmPoolID)
 
-	view, err := e.GetView(clientSetID, domain.DmPoolID)
-	if err != nil {
-		if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
+	found_policy := false
+	for _, cs := range clientSets {
+		view, err = e.GetView(cs.ID, domain.DmPoolID)
+		if err != nil {
+			continue
+		}
+		if view.Upstream == nil {
+			continue
+		}
+
+		//Policy is a method class to choose upstreamhost (ldns) from upstream (policy)
+		policy = view.Upstream.GetPolicy()
+		if policy == nil {
+			continue
+		}
+
+		//clientSetID = cs.ID
+		found_policy = true
+		break
+	}
+
+	if !found_policy {
+		if _, domain, ok = rollback(engine.DefaultClientSetID, domain); ok {
 			goto try_again
 		}
 
 		v.Logger.Warn("view not found")
-		return dns.RcodeServerFailure, errUnexpectedLogic
-	}
-
-	v.Logger.Debug("get view %v", view)
-
-	if view.Upstream == nil {
-		if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
-			goto try_again
-		}
-
-		v.Logger.Warn("view upstream not found")
-		return dns.RcodeServerFailure, errUnexpectedLogic
-	}
-
-	//Policy is a method class to choose upstreamhost (ldns) from upstream (policy)
-	policy := view.Upstream.GetPolicy()
-	if policy == nil {
-		if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
-			goto try_again
-		}
-
-		v.Logger.Warn("view hosts policy not found")
 		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
@@ -225,52 +236,66 @@ try_again:
 		}
 
 		bestRoutePrio := math.MaxInt32
-		for _, rr := range rrset {
-			var routes engine.RouteSlice
-			a := rr.(*dns.A)
-			netlinks := e.GetNetLinks(a.A)
-			v.Logger.Debug("ip %s found netLink: %v", a.A, netlinks)
-
-			for _, nl := range netlinks {
-				routes = e.GetRoute(view.RouteSetID, domain.DmPoolID, nl.ID)
-				if len(routes) > 0 {
-					break
-				}
-			}
-
-			if len(routes) == 0 {
-				v.Logger.Debug("no route found")
+		for _, cs := range clientSets {
+			tmpView, err := e.GetView(cs.ID, domain.DmPoolID)
+			if err != nil {
 				continue
 			}
 
-			route := routes[0]
-			v.Logger.Debug("route found to outlink %s", route.OutLink.Addr)
+			for _, rr := range rrset {
+				var routes engine.RouteSlice
+				a := rr.(*dns.A)
+				netlinks := e.GetNetLinks(a.A)
+				v.Logger.Debug("ip %s found netLink: %v", a.A, netlinks)
 
-			if origDomain.Monitor {
-				v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
-				status, ok := e.GetLink(a.A.String(), routes[0].OutLink.Addr)
-				if ok && status.Status == engine.LinkStatusDown {
-					v.Logger.Debug("%s dynamic monitor status down", a)
+				for _, nl := range netlinks {
+					routes = e.GetRoute(tmpView.RouteSetID, domain.DmPoolID, nl.ID)
+					if len(routes) > 0 {
+						break
+					}
+				}
+
+				if len(routes) == 0 {
+					v.Logger.Debug("no route found")
 					continue
 				}
+
+				route := routes[0]
+				v.Logger.Debug("route found to outlink %s", route.OutLink.Addr)
+
+				if origDomain.Monitor {
+					v.Logger.Debug("domain %s with dmpool %d need to use dynamic monitor", q.Name, domain.DmPoolID)
+					status, ok := e.GetLink(a.A.String(), routes[0].OutLink.Addr)
+					if ok && status.Status == engine.LinkStatusDown {
+						v.Logger.Debug("%s dynamic monitor status down", a)
+						continue
+					}
+				}
+
+				if route.Priority > bestRoutePrio {
+					continue
+				}
+
+				if route.Priority < bestRoutePrio {
+					bestRoutePrio = route.Priority
+					better = better[:0]
+					v.Logger.Debug("better route found with priority %d", route.Priority)
+				}
+
+				v.Logger.Debug("ip addr %s has been accepted for %s", a.A, route.OutLink.Addr)
+				a.Hdr.Name = q.Name
+				better = append(better, a)
 			}
 
-			if route.Priority > bestRoutePrio {
-				continue
+			if len(better) > 0 {
+				//find at least one good  answer
+				v.Logger.Debug("clientset_id %d domainpool_id %d found routes", cs.ID, domain.DmPoolID)
+				break
 			}
-
-			if route.Priority < bestRoutePrio {
-				bestRoutePrio = route.Priority
-				better = better[:0]
-			}
-
-			v.Logger.Debug("ip addr %s has been accepted for %s", a.A, route.OutLink.Addr)
-			a.Hdr.Name = q.Name
-			better = append(better, a)
 		}
 
 		if len(better) == 0 {
-			// No luck for this time, try to ask other upstreamhosts
+			// nothing found, try next policy
 			continue
 		}
 
@@ -295,7 +320,7 @@ try_again:
 	// try again the whole precedure with domainPoolID equals to
 	// default domainPoolID which is 1. Or the domainPoolID is already the default, Lookup failed
 
-	if clientSetID, domain, ok = rollback(clientSetID, domain); ok {
+	if _, domain, ok = rollback(engine.DefaultClientSetID, domain); ok {
 		goto try_again
 	}
 

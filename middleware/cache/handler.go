@@ -22,9 +22,12 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 	if engine, ok := v.(*vane.Engine); ok && engine != nil {
 		cip := state.GetRemoteAddr()
 		if cip != nil {
-			cid := engine.GetClientSetID(cip)
-			tag = strconv.Itoa(cid)
-			ctx = context.WithValue(ctx, "clientset_id", cid)
+			clientSets := engine.GetClientSets(cip)
+			if len(clientSets) > 0 {
+				cid := clientSets[0].ID
+				tag = strconv.Itoa(cid)
+				ctx = context.WithValue(ctx, "clientsets", clientSets)
+			}
 		}
 	}
 
