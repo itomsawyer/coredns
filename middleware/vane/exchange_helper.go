@@ -13,15 +13,13 @@ import (
 )
 
 type ExchangeHelper struct {
-	Upstream *engine.Upstream
-	Hosts    []*engine.UpstreamHost
-	Timeout  time.Duration
+	Hosts   []*engine.UpstreamHost
+	Timeout time.Duration
 }
 
-func NewExchangeHelper(u *engine.Upstream, hosts []*engine.UpstreamHost) *ExchangeHelper {
+func NewExchangeHelper(hosts []*engine.UpstreamHost) *ExchangeHelper {
 	return &ExchangeHelper{
-		Upstream: u,
-		Hosts:    hosts,
+		Hosts: hosts,
 	}
 }
 
@@ -30,10 +28,6 @@ func NewExchangeHelper(u *engine.Upstream, hosts []*engine.UpstreamHost) *Exchan
 // retcode NOERROR PriorTo NXDOMAIN PriorTo NOTIMPLEMENT PriorTo REFUSE PriorTo SERVERFAIL
 // see msgs.Best() for details
 func (h *ExchangeHelper) DoExchange(ctx context.Context, state request.Request) (replys []*dns.Msg, retcode int) {
-	if h.Upstream == nil {
-		return nil, dns.RcodeServerFailure
-	}
-
 	if h.Timeout == 0 {
 		h.Timeout = defaultTimeout
 	}
