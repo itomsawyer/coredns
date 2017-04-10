@@ -51,6 +51,14 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 
 			for c.NextBlock() {
 				switch c.Val() {
+				case "keep_cname_chain":
+					args := c.RemainingArgs()
+					if len(args) != 1 {
+						return nil, c.ArgErr()
+					}
+
+					vane.KeepCNAMEChain = parseBool(args[0])
+
 				case "upstream_timeout":
 					args := c.RemainingArgs()
 					if len(args) != 1 {
@@ -88,4 +96,12 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 	}
 
 	return vane, nil
+}
+
+func parseBool(s string) bool {
+	if s == "yes" || s == "on" || s == "true" {
+		return true
+	}
+
+	return false
 }

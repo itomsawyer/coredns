@@ -17,6 +17,7 @@ import (
 type Vane struct {
 	UpstreamTimeout time.Duration
 	Debug           bool
+	KeepCNAMEChain  bool
 	Logger          *logs.BeeLogger
 	LogConfigs      []*engine.LogConfig
 	RcodePriority   *RcodePriority
@@ -285,7 +286,7 @@ try_again:
 			}
 
 			// we got answer, return
-			if cnameSlice := cnameSet.ToSlice(); len(cnameSlice) != 0 {
+			if cnameSlice := cnameSet.ToSlice(); len(cnameSlice) != 0 && v.KeepCNAMEChain {
 				replyMsg.Answer = append(cnameSlice, better...)
 			} else {
 				replyMsg.Answer = better
