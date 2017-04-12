@@ -45,6 +45,30 @@ func Size(proto string, size int) int {
 	return size
 }
 
+func RemoveClientSubnetIfExist(r *dns.Msg) {
+	opt := r.IsEdns0()
+	if opt == nil {
+		return
+	}
+
+	tail := len(opt.Option) - 1
+
+	for i, o := range opt.Option {
+		switch o.Option() {
+		case dns.EDNS0SUBNET:
+			if i != tail {
+				opt.Option[i], opt.Option[tail] = opt.Option[tail], opt.Option[i]
+			}
+
+			opt.Option = opt.Option[:tail-1]
+			return
+
+		default:
+			continue
+		}
+	}
+}
+
 func ReadClientSubnet(r *dns.Msg) *dns.EDNS0_SUBNET {
 	opt := r.IsEdns0()
 	if opt == nil {

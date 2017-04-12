@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/pkg/edns"
 	"github.com/coredns/coredns/middleware/vane/engine"
 	"github.com/coredns/coredns/request"
 
@@ -15,13 +16,21 @@ import (
 )
 
 type Vane struct {
+	VaneConfig
+
+	Logger        *logs.BeeLogger
+	RcodePriority *RcodePriority
+	Next          middleware.Handler
+}
+
+type VaneConfig struct {
 	UpstreamTimeout time.Duration
+
 	Debug           bool
 	KeepCNAMEChain  bool
-	Logger          *logs.BeeLogger
-	LogConfigs      []*engine.LogConfig
-	RcodePriority   *RcodePriority
-	Next            middleware.Handler
+	KeepUpstreamECS bool
+
+	LogConfigs []*engine.LogConfig
 }
 
 func NewVane() *Vane {
@@ -96,6 +105,10 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		v.Logger.Debug("fetch clientsets from request: %v", clientSets)
 	} else {
 		v.Logger.Debug("fetch clientsets from vane_engine: %v", clientSets)
+	}
+
+	if !v.KeepUpstreamECS {
+		edns.RemoveClientSubnetIfExist(state.Req)
 	}
 
 	if len(clientSets) == 0 {

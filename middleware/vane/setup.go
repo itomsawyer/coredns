@@ -59,6 +59,14 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 
 					vane.KeepCNAMEChain = parseBool(args[0])
 
+				case "keep_upstream_ecs":
+					args := c.RemainingArgs()
+					if len(args) != 1 {
+						return nil, c.ArgErr()
+					}
+
+					vane.KeepUpstreamECS = parseBool(args[0])
+
 				case "upstream_timeout":
 					args := c.RemainingArgs()
 					if len(args) != 1 {
@@ -82,7 +90,7 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 
 				case "debug":
 					args := c.RemainingArgs()
-					if len(args) != 0 {
+					if len(args) != 1 {
 						return nil, c.ArgErr()
 					}
 

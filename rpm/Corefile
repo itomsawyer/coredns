@@ -1,4 +1,4 @@
-.:8053 {
+.:53 {
     vane_engine {
         db root:@tcp(127.0.0.1:3306)/iwg
         log {
@@ -11,34 +11,35 @@
 	#    cache_cap    10000
 
  	#    send_topic   dst2otlnk
-	#    send_hosts   192.168.29.246:4150
+	#    send_hosts   127.0.0.1:4150
 
 	#    read_topic   dlresult
 	#    read_channel coredns1
-	#    read_hosts   192.168.29.246:4161
+	#    read_hosts   127.0.0.1:4161
 
 	#    unknown_ttl  1m
 	#    link_ttl     5m
 
 	#    log {
-	#	type file
-	#	level debug
-	#	filename /home/coredns/logs/lm.log
+	#	   type file
+	#	   level debug
+	#	   filename /home/coredns/logs/lm.log
 	#    }
-	#}
+	#  }
     }
 
     vane {
-        #debug
+        #debug no 
 
         log {
-            type file 
-	    level info
-            #level debug
-	    filename /home/coredns/logs/vane.log
+            type file
+            level info
+            filename /home/coredns/logs/vane.log
         }
 
-        upstream_timeout 1s
+        upstream_timeout 500ms
+        keep_cname_chain no
+        keep_upstream_ecs no
     }
 
     log /home/coredns/logs/query.log {
@@ -53,6 +54,6 @@
 
     cache . {
         success 20000 300
-        denial  5000  15
+        denial  5000  10
     }
 }
