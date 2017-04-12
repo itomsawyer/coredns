@@ -52,7 +52,6 @@ func RemoveClientSubnetIfExist(r *dns.Msg) {
 	}
 
 	tail := len(opt.Option) - 1
-
 	for i, o := range opt.Option {
 		switch o.Option() {
 		case dns.EDNS0SUBNET:
@@ -60,13 +59,18 @@ func RemoveClientSubnetIfExist(r *dns.Msg) {
 				opt.Option[i], opt.Option[tail] = opt.Option[tail], opt.Option[i]
 			}
 
-			opt.Option = opt.Option[:tail-1]
+			opt.Option = opt.Option[:tail]
 			return
 
 		default:
 			continue
 		}
 	}
+}
+
+func HasClientSubnet(r *dns.Msg) bool {
+	o := ReadClientSubnet(r)
+	return o != nil
 }
 
 func ReadClientSubnet(r *dns.Msg) *dns.EDNS0_SUBNET {

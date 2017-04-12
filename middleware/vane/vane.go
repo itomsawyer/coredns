@@ -107,8 +107,10 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 		v.Logger.Debug("fetch clientsets from vane_engine: %v", clientSets)
 	}
 
-	if !v.KeepUpstreamECS {
-		edns.RemoveClientSubnetIfExist(state.Req)
+	if edns.HasClientSubnet(r) && !v.KeepUpstreamECS {
+		req := r.Copy()
+		edns.RemoveClientSubnetIfExist(req)
+		state = request.Request{W: w, Req: req}
 	}
 
 	if len(clientSets) == 0 {
