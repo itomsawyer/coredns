@@ -21,17 +21,10 @@ func main() {
 	conFile := flag.String("conf", "domains.conf", "domains to lookup (JSON format)")
 	host := flag.String("host", "223.5.5.5:53", "dns server host")
 	output := flag.String("output", "stdout", "output file")
-	minRTT := flag.String("rtt", "5ms", "if dns rtt is less than the given value consider it is invalid. Set rtt to 0 to disable")
 	hasCname := flag.Bool("hascname", true, "if true, dns response must has CNAME recored to be considered valid response")
 	hasA := flag.Bool("hasa", true, "if true, dns response must has A recored to be considered valid response")
 
 	flag.Parse()
-
-	mrtt, err := time.ParseDuration(*minRTT)
-	if err != nil {
-		fmt.Println("rtt param error:", err)
-		return
-	}
 
 	conf, err := ioutil.ReadFile(*conFile)
 	if err != nil {
@@ -75,12 +68,8 @@ func main() {
 
 		in, rtt, err := c.Exchange(msg, *host)
 		if err != nil {
-			fmt.Println(dm, "dns exchange error", err)
-			continue
-		}
-
-		if mrtt != 0 && rtt < mrtt {
-			fmt.Println(dm, "rtt too small minRTT:", mrtt, "actual rtt:", rtt)
+			ret := fmt.Sprintf("[ErrExchange:%s]", err.Error())
+			fmt.Fprintf(o, "%s %s %s %d %s\n", dm, "-", rtt, rtt, ret)
 			continue
 		}
 
