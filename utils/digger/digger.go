@@ -97,7 +97,7 @@ func main() {
 func newQuestion(dm string) *dns.Msg {
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(dm), dns.TypeA)
-	m.RecursionDesired = true
+	m.SetEdns0(dns.DefaultMsgSize, false)
 	return m
 }
 
