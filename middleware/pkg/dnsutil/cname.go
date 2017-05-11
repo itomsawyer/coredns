@@ -13,3 +13,17 @@ func DuplicateCNAME(r *dns.CNAME, records []dns.RR) bool {
 	}
 	return false
 }
+
+func RemoveCNAME(records []dns.RR) []dns.RR {
+	left := make([]dns.RR, 0, 1)
+
+	for _, rr := range records {
+		if _, ok := rr.(*dns.CNAME); ok {
+			continue
+		}
+
+		left = append(left, rr)
+	}
+
+	return left
+}

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/middleware"
+	"github.com/coredns/coredns/middleware/pkg/dnsutil"
 	"github.com/coredns/coredns/middleware/pkg/edns"
 	"github.com/coredns/coredns/middleware/vane/engine"
 	"github.com/coredns/coredns/request"
@@ -213,6 +214,12 @@ try_again:
 			// No need to filter record with type is not A, Get a proper one to return
 			if q.Qtype != dns.TypeA {
 				if bestrc == dns.RcodeSuccess && replyMsg != nil {
+					if !v.KeepCNAMEChain {
+						replyMsg.Answer = dnsutil.RemoveCNAME(replyMsg.Answer)
+						replyMsg.Ns = []dns.RR{}
+						replyMsg.Extra = []dns.RR{}
+					}
+
 					w.WriteMsg(replyMsg)
 					return 0, nil
 				}
