@@ -63,6 +63,7 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 	vane = &VaneEngine{
 		DBHost:  "root:@localhost/iwg",
 		CtlHost: "127.0.0.1:9053",
+		cancel:  make(chan struct{}, 1),
 	}
 
 	for c.Next() {

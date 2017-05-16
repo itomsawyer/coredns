@@ -26,6 +26,7 @@ type VaneEngine struct {
 	CtlHost    string
 
 	reloadLock sync.Mutex
+	cancel     chan struct{}
 
 	ln         net.Listener
 	mux        *http.ServeMux
@@ -60,16 +61,23 @@ func (v *VaneEngine) Init() error {
 
 		for {
 			ln, err = net.Listen("tcp", v.CtlHost)
-			if err != nil {
-				if n >= 3 {
-					v.Logger.Error("Failed to start vane engine controller listener: %s", err)
-				}
-
-				time.Sleep(1 * time.Second)
-				n++
-				continue
+			if err == nil {
+				break
 			}
-			break
+
+			if n >= 3 {
+				v.Logger.Warn("Failed to start vane engine controller listener: %s", err)
+			}
+
+			time.Sleep(1 * time.Second)
+			n++
+
+			select {
+			case <-time.After(1 * time.Second):
+			case <-v.cancel:
+				v.Logger.Info("vane engine controller stop to serve due to cancel")
+				return
+			}
 		}
 
 		v.ln = ln
@@ -114,6 +122,8 @@ func (v *VaneEngine) Stop() {
 	if v.httpServer != nil {
 		v.httpServer.Close()
 	}
+
+	close(v.cancel)
 }
 
 func (v *VaneEngine) Reload() error {
