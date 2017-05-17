@@ -24,12 +24,14 @@ type LogConfig struct {
 	adapter  string
 	FileName string
 	Level    int
+	Perm     string
 }
 
 func NewLogConfig() *LogConfig {
 	return &LogConfig{
 		adapter: logs.AdapterConsole,
 		Level:   logs.LevelInfo,
+		Perm:    "0666",
 	}
 }
 
@@ -147,6 +149,13 @@ func ParseLogConfig(c *caddy.Controller) (*LogConfig, error) {
 			}
 
 			lc.Level = n
+		case "perm":
+			args := c.RemainingArgs()
+			if len(args) != 1 {
+				return nil, c.ArgErr()
+			}
+
+			lc.Perm = args[0]
 		default:
 			return nil, c.ArgErr()
 		}
