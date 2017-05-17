@@ -94,7 +94,25 @@ SET character_set_client = utf8;
  1 AS `outlink_id`,
  1 AS `outlink_name`,
  1 AS `outlink_addr`,
- 1 AS `outlink_typ`*/;
+ 1 AS `outlink_typ`,
+ 1 AS `outlink_enable`,
+ 1 AS `outlink_unavailable`,
+ 1 AS `route_enable`,
+ 1 AS `route_unavailable`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `best_route_view`
+--
+
+DROP TABLE IF EXISTS `best_route_view`;
+/*!50001 DROP VIEW IF EXISTS `best_route_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `best_route_view` AS SELECT 
+ 1 AS `routeset_id`,
+ 1 AS `netlinkset_id`,
+ 1 AS `route_priority`*/;
 SET character_set_client = @saved_cs_client;
 
 --
@@ -847,6 +865,7 @@ CREATE TABLE `route` (
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'if other than zero, route is unavailable, each bit indicate different reason',
   PRIMARY KEY (`id`),
   UNIQUE KEY `netlinkset_id` (`netlinkset_id`,`outlink_id`,`routeset_id`),
+  UNIQUE KEY `netlinkset_id_2` (`netlinkset_id`,`outlink_id`,`priority`),
   KEY `outlink_id` (`outlink_id`),
   KEY `routeset_id` (`routeset_id`),
   CONSTRAINT `route_ibfk_1` FOREIGN KEY (`outlink_id`) REFERENCES `outlink` (`id`),
@@ -1034,7 +1053,25 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `base_route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,`route`.`priority` AS `route_priority`,`route`.`score` AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`) and (`outlink`.`enable` = 1) and (`route`.`enable` = 1) and (`outlink`.`unavailable` = 0) and (`route`.`unavailable` = 0) and (`route`.`score` <> 0)) */;
+/*!50001 VIEW `base_route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,`route`.`priority` AS `route_priority`,`route`.`score` AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ`,`outlink`.`enable` AS `outlink_enable`,`outlink`.`unavailable` AS `outlink_unavailable`,`route`.`enable` AS `route_enable`,`route`.`unavailable` AS `route_unavailable` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `best_route_view`
+--
+
+/*!50001 DROP VIEW IF EXISTS `best_route_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+/*!50001 SET collation_connection      = utf8_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `best_route_view` AS select `base_route_view`.`routeset_id` AS `routeset_id`,`base_route_view`.`netlinkset_id` AS `netlinkset_id`,min(`base_route_view`.`route_priority`) AS `route_priority` from `base_route_view` where ((`base_route_view`.`outlink_enable` = 1) and (`base_route_view`.`route_enable` = 1) and (`base_route_view`.`route_unavailable` = 0) and (`base_route_view`.`outlink_unavailable` = 0) and (`base_route_view`.`route_score` <> 0)) group by `base_route_view`.`routeset_id`,`base_route_view`.`netlinkset_id` */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1214,7 +1251,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `route_view` AS select `route`.`routeset_id` AS `routeset_id`,`routeset`.`name` AS `routeset_name`,`route`.`netlinkset_id` AS `netlinkset_id`,`netlinkset`.`name` AS `netlinkset_name`,`route`.`id` AS `route_id`,min(`route`.`priority`) AS `route_priority`,max(`route`.`score`) AS `route_score`,`route`.`outlink_id` AS `outlink_id`,`outlink`.`name` AS `outlink_name`,`outlink`.`addr` AS `outlink_addr`,`outlink`.`typ` AS `outlink_typ` from (((`netlinkset` join `outlink`) join `route`) join `routeset`) where ((`netlinkset`.`id` = `route`.`netlinkset_id`) and (`outlink`.`id` = `route`.`outlink_id`) and (`route`.`routeset_id` = `routeset`.`id`) and (`outlink`.`enable` = 1) and (`route`.`enable` = 1) and (`outlink`.`unavailable` = 0) and (`route`.`unavailable` = 0) and (`route`.`score` <> 0)) group by `route`.`routeset_id`,`route`.`netlinkset_id` */;
+/*!50001 VIEW `route_view` AS select `a`.`routeset_id` AS `routeset_id`,`a`.`routeset_name` AS `routeset_name`,`a`.`netlinkset_id` AS `netlinkset_id`,`a`.`netlinkset_name` AS `netlinkset_name`,`a`.`route_id` AS `route_id`,`a`.`route_priority` AS `route_priority`,`a`.`route_score` AS `route_score`,`a`.`outlink_id` AS `outlink_id`,`a`.`outlink_name` AS `outlink_name`,`a`.`outlink_addr` AS `outlink_addr`,`a`.`outlink_typ` AS `outlink_typ` from (`base_route_view` `a` join `best_route_view` `b`) where ((`a`.`routeset_id` = `b`.`routeset_id`) and (`a`.`netlinkset_id` = `b`.`netlinkset_id`) and (`a`.`route_priority` = `b`.`route_priority`)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1246,4 +1283,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-04-09 15:01:05
+-- Dump completed on 2017-05-18  1:20:21

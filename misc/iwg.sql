@@ -3,6 +3,7 @@ create database iwg;
 use iwg;
 
 drop view if exists route_view;
+drop view if exists best_route_view;
 drop view if exists base_route_view;
 drop view if exists policy_view;
 drop view if exists clientset_view;
@@ -216,6 +217,7 @@ score smallint not null default 50 comment "netlink performance index",
 unavailable smallint unsigned not null default 0 comment "if other than zero, route is unavailable, each bit indicate different reason",
 primary key(id),
 unique key(netlinkset_id, outlink_id, routeset_id),
+unique key(netlinkset_id, outlink_id, priority),
 foreign key(outlink_id) references outlink(id) on delete restrict,
 foreign key(netlinkset_id) references netlinkset(id) on delete restrict,
 foreign key(routeset_id) references routeset(id) on delete cascade 
@@ -464,23 +466,30 @@ from  domain_pool, netlink, domainlink, netlinkset
 where domain_pool.id = domainlink.domain_pool_id and netlink.id = domainlink.netlink_id and domain_pool.enable = true and domain_pool.unavailable = 0
 and domainlink.enable = true and netlinkset.id = domainlink.netlinkset_id;
 
-create ALGORITHM = MERGE view route_view as
-select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, min(route.priority) as route_priority, max(route.score) as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
-from netlinkset, outlink, route, routeset
-where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
-and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0
-group by routeset_id, netlinkset_id;
 
 create ALGORITHM = MERGE view outlink_view as
 select outlink_id,outlink.addr as outlink_addr ,natlink.addr as natlink_addr, natserver_id, natserver.name as nat_name,natlink.gw as natlink_gw, natlink.status as natlink_status
 from outlink,natlink,natserver
 where natlink.natserver_id = natserver.id and natlink.outlink_id = outlink.id and natserver.enable =true and natserver.unavailable = 0;
 
-create ALGORITHM = MERGE view base_route_view as
-select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, route.priority as route_priority, route.score as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ
+create or replace ALGORITHM = MERGE view base_route_view as
+select routeset_id, routeset.name as routeset_name,  netlinkset_id, netlinkset.name as netlinkset_name, route.id as route_id, route.priority as route_priority, route.score as route_score, outlink_id, outlink.name as outlink_name,  outlink.addr as outlink_addr, outlink.typ as outlink_typ,
+outlink.enable as outlink_enable , outlink.unavailable as outlink_unavailable, route.enable as route_enable , route.unavailable as route_unavailable
 from netlinkset, outlink, route, routeset
-where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id
-and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0;
+where netlinkset.id = route.netlinkset_id and outlink.id = route.outlink_id and route.routeset_id = routeset.id;
+-- and outlink.enable = true and route.enable = true and outlink.unavailable = 0 and route.unavailable = 0 and route.score != 0;
+
+create or replace ALGORITHM = MERGE view best_route_view as
+SELECT routeset_id, netlinkset_id,  min(route_priority) as route_priority FROM base_route_view 
+where outlink_enable = true and route_enable = true and route_unavailable = 0 and  outlink_unavailable = 0 and route_score != 0
+group by routeset_id, netlinkset_id;
+
+create or replace view route_view as
+select a.routeset_id, routeset_name,  a.netlinkset_id,
+netlinkset_name, route_id, a.route_priority, route_score,
+outlink_id, outlink_name,  outlink_addr, outlink_typ
+from base_route_view a join best_route_view b
+where a.routeset_id = b.routeset_id and a.netlinkset_id = b.netlinkset_id and a.route_priority = b.route_priority;
 
 create ALGORITHM = MERGE view policy_view as
 select policy.id as policy_id, policy.name as policy_name,
