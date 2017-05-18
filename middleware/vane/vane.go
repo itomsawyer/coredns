@@ -115,7 +115,7 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	}
 
 	if len(clientSets) == 0 {
-		v.Logger.Warn("clientSets not found")
+		v.Logger.Warn("clientSets not found client: %v domain: %s", cip, q.Name)
 		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
@@ -163,7 +163,7 @@ try_again:
 			goto try_again
 		}
 
-		v.Logger.Warn("upstream policy not found")
+		v.Logger.Warn("upstream policy not found client: %v domain: %s", cip, q.Name)
 		return dns.RcodeServerFailure, errUnexpectedLogic
 	}
 
