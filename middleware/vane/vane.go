@@ -250,6 +250,7 @@ try_again:
 
 			bestRoutePrio := math.MaxInt32
 			for _, tmpView := range views {
+				v.Logger.Debug("current routeset %d %s", tmpView.RouteSetID, tmpView.RouteSetName)
 				for _, rr := range rrset {
 					var routes engine.RouteSlice
 					a := rr.(*dns.A)
