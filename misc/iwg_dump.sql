@@ -805,9 +805,9 @@ CREATE TABLE `policy_detail` (
   `ldns_id` int(11) NOT NULL,
   `rrset_id` int(11) DEFAULT NULL,
   PRIMARY KEY (`id`),
+  UNIQUE KEY `policy_id` (`policy_id`,`ldns_id`),
   KEY `ldns_id` (`ldns_id`),
   KEY `rrset_id` (`rrset_id`),
-  KEY `policy_id` (`policy_id`),
   CONSTRAINT `policy_detail_ibfk_1` FOREIGN KEY (`ldns_id`) REFERENCES `ldns` (`id`),
   CONSTRAINT `policy_detail_ibfk_2` FOREIGN KEY (`rrset_id`) REFERENCES `rrset` (`id`),
   CONSTRAINT `policy_detail_ibfk_3` FOREIGN KEY (`policy_id`) REFERENCES `policy` (`id`) ON DELETE CASCADE
@@ -1283,4 +1283,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-05-18  1:20:21
+-- Dump completed on 2017-05-25 17:39:23

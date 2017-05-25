@@ -277,6 +277,7 @@ op_typ varchar(32) not null default "builtin",
 ldns_id int not null,
 rrset_id int,
 primary key(id),
+unique key(policy_id, ldns_id),
 foreign key(ldns_id) references ldns(id) on delete restrict,
 foreign key(rrset_id) references rrset(id) on delete restrict,
 foreign key(policy_id) references policy(id) on delete cascade
