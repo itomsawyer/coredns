@@ -1019,7 +1019,7 @@ CREATE TABLE `viewer` (
   `policy_id` int(11) NOT NULL,
   `enable` tinyint(1) NOT NULL DEFAULT '1',
   PRIMARY KEY (`id`),
-  KEY `clientset_id` (`clientset_id`),
+  UNIQUE KEY `clientset_id` (`clientset_id`,`domain_pool_id`),
   KEY `domain_pool_id` (`domain_pool_id`),
   KEY `routeset_id` (`routeset_id`),
   KEY `policy_id` (`policy_id`),
@@ -1283,4 +1283,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-05-25 17:39:23
+-- Dump completed on 2017-06-02 15:28:58
