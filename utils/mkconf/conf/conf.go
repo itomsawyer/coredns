@@ -2,7 +2,6 @@ package conf
 
 import (
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/coredns/coredns/middleware/vane/models"
@@ -146,10 +145,10 @@ func (p *Conf) CreateAgent(key string, common bool, dp string) (*Agent, error) {
 			ExForwarder: ldns.ExForwarder,
 		}
 
-		if mirror, ok := p.ldnsMirror[ldnsKey]; ok {
+		if mirror, ok := p.ldnsMirror[ldns.Name]; ok {
 			p.Agents[agentKey].Mirror = mirror
 		} else {
-			p.ldnsMirror[ldnsKey] = agentKey
+			p.ldnsMirror[ldns.Name] = agentKey
 		}
 
 		return p.Agents[agentKey], nil
@@ -261,6 +260,15 @@ func (conf *Conf) BuildConfFromDB(db string) error {
 
 	for _, cd := range coredns {
 		conf.AddCorednsHost(cd.Addr, cd.Checkdm)
+	}
+
+	dps, err := models.GetDomainPool(o, query, nil, nil, 0, -1)
+	if err != nil {
+		return err
+	}
+
+	for _, dp := range dps {
+		conf.AddCorednsDomainPool(dp.Name)
 	}
 
 	for _, c := range cs_wl {
