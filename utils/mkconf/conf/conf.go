@@ -2,6 +2,7 @@ package conf
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/coredns/coredns/middleware/vane/models"
@@ -15,6 +16,7 @@ type Conf struct {
 	Views             SliceMap          `json:"views"`
 	ClientSets        SliceMap          `json:"clientsets"`
 	ldns              map[string]*DNS
+	ldnsMirror        map[string]string
 	corednsDomainPool map[string]bool
 	corednsHost       []string
 	corednsCheckdm    []string
@@ -27,6 +29,7 @@ func NewConf() *Conf {
 		Views:             SliceMap{},
 		ClientSets:        SliceMap{},
 		ldns:              make(map[string]*DNS, 1),
+		ldnsMirror:        make(map[string]string, 1),
 		corednsDomainPool: make(map[string]bool, 1),
 		corednsHost:       make([]string, 0, 1),
 	}
@@ -122,6 +125,13 @@ func (p *Conf) CreateAgent(key string, common bool, dp string) (*Agent, error) {
 			Ecs:         true,
 			CheckDomain: p.corednsCheckdm,
 		}
+
+		if mirror, ok := p.ldnsMirror["__coredns__"]; ok {
+			p.Agents[agentKey].Mirror = mirror
+		} else {
+			p.ldnsMirror["__coredns__"] = agentKey
+		}
+
 		return p.Agents[agentKey], nil
 	}
 
@@ -135,6 +145,13 @@ func (p *Conf) CreateAgent(key string, common bool, dp string) (*Agent, error) {
 			CheckDomain: ldns.CheckDomain,
 			ExForwarder: ldns.ExForwarder,
 		}
+
+		if mirror, ok := p.ldnsMirror[ldnsKey]; ok {
+			p.Agents[agentKey].Mirror = mirror
+		} else {
+			p.ldnsMirror[ldnsKey] = agentKey
+		}
+
 		return p.Agents[agentKey], nil
 	} else {
 		return nil, fmt.Errorf("ldns slice cannot be found")
@@ -171,6 +188,7 @@ type Agent struct {
 	Ecs         bool     `json:"ecs,omitempty"`
 	ExForwarder []string `json:"exforwarder,omitempty"`
 	CheckDomain []string `json:"checkdm,omitempty"`
+	Mirror      string   `json:"mirror,omitempty"`
 }
 
 type SliceMap map[string][]string
