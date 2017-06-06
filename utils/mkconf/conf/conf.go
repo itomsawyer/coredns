@@ -14,9 +14,10 @@ type Conf struct {
 	DomainPools       SliceMap          `json:"domainpools"`
 	Views             SliceMap          `json:"views"`
 	ClientSets        SliceMap          `json:"clientsets"`
-	ldns              SliceMap
+	ldns              map[string]*DNS
 	corednsDomainPool map[string]bool
 	corednsHost       []string
+	corednsCheckdm    []string
 }
 
 func NewConf() *Conf {
@@ -25,7 +26,7 @@ func NewConf() *Conf {
 		DomainPools:       SliceMap{},
 		Views:             SliceMap{},
 		ClientSets:        SliceMap{},
-		ldns:              SliceMap{},
+		ldns:              make(map[string]*DNS, 1),
 		corednsDomainPool: make(map[string]bool, 1),
 		corednsHost:       make([]string, 0, 1),
 	}
@@ -39,12 +40,18 @@ func (p *Conf) AddCorednsDomainPool(dp string) {
 	p.corednsDomainPool[dp] = true
 }
 
-func (p *Conf) AddCorednsHost(host string) {
+func (p *Conf) AddCorednsHost(host string, checkdm string) {
 	if p.corednsHost == nil {
 		p.corednsHost = make([]string, 0, 1)
 	}
 
 	p.corednsHost = append(p.corednsHost, host)
+
+	if p.corednsCheckdm == nil {
+		p.corednsCheckdm = make([]string, 0, 1)
+	}
+
+	p.corednsCheckdm = append(p.corednsCheckdm, checkdm)
 }
 
 func (p *Conf) AddIpNet(view string, ipnet string) {
@@ -107,30 +114,63 @@ func (p *Conf) CreateAgent(key string, common bool, dp string) (*Agent, error) {
 	}
 
 	if corednsAgent {
-		p.Agents[agentKey] = &Agent{Name: agentKey, Common: common, DomainPool: dp, DNS: p.corednsHost, Ecs: true}
+		p.Agents[agentKey] = &Agent{
+			Name:        agentKey,
+			Common:      common,
+			DomainPool:  dp,
+			DNS:         p.corednsHost,
+			Ecs:         true,
+			CheckDomain: p.corednsCheckdm,
+		}
 		return p.Agents[agentKey], nil
 	}
 
 	ldnsKey := key
 	if ldns, ok := p.ldns[ldnsKey]; ok {
-		p.Agents[agentKey] = &Agent{Name: agentKey, Common: common, DomainPool: dp, DNS: ldns}
+		p.Agents[agentKey] = &Agent{
+			Name:        agentKey,
+			Common:      common,
+			DomainPool:  dp,
+			DNS:         ldns.Host,
+			CheckDomain: ldns.CheckDomain,
+			ExForwarder: ldns.ExForwarder,
+		}
 		return p.Agents[agentKey], nil
 	} else {
 		return nil, fmt.Errorf("ldns slice cannot be found")
 	}
 }
 
-func (p *Conf) AddDNS(policy string, priority int, dns string) {
+func (p *Conf) AddDNS(policy string, priority int, dns string, typ string, checkdm string) error {
 	key := fmt.Sprintf("%s-%d", policy, priority)
-	p.ldns.Add(key, dns)
+	if p.ldns == nil {
+		p.ldns = make(map[string]*DNS, 1)
+	}
+
+	if _, ok := p.ldns[key]; !ok {
+		p.ldns[key] = new(DNS)
+	}
+
+	switch typ {
+	case "ldns":
+		p.ldns[key].AddExForwarder(dns)
+	case "upstream":
+		p.ldns[key].AddHost(dns, checkdm)
+	default:
+		return fmt.Errorf("unknown ldns type")
+	}
+
+	return nil
 }
 
 type Agent struct {
-	Name       string   `json:"-"`
-	DNS        []string `json:"dns"`
-	Common     bool     `json:"common"`
-	DomainPool string   `json:"zones"`
-	Ecs        bool     `json:"ecs"`
+	Name        string   `json:"-"`
+	DNS         []string `json:"dns"`
+	Common      bool     `json:"common"`
+	DomainPool  string   `json:"zones,omitempty"`
+	Ecs         bool     `json:"ecs,omitempty"`
+	ExForwarder []string `json:"exforwarder,omitempty"`
+	CheckDomain []string `json:"checkdm,omitempty"`
 }
 
 type SliceMap map[string][]string
@@ -173,6 +213,7 @@ func (v SliceMap) Del(key string) {
 }
 
 func (conf *Conf) BuildConfFromDB(db string) error {
+	var query models.Values
 	if err := models.InitDB(db); err != nil {
 		return err
 	}
@@ -191,6 +232,17 @@ func (conf *Conf) BuildConfFromDB(db string) error {
 	cs_wl, err := models.GetClientSetWLView(o, nil, nil, nil, 0, -1)
 	if err != nil {
 		return err
+	}
+
+	query = models.Values{}
+	query.Set("typ", "coredns")
+	coredns, err := models.GetLDNS(o, query, nil, nil, 0, -1)
+	if err != nil {
+		return err
+	}
+
+	for _, cd := range coredns {
+		conf.AddCorednsHost(cd.Addr, cd.Checkdm)
 	}
 
 	for _, c := range cs_wl {
@@ -215,7 +267,10 @@ func (conf *Conf) BuildConfFromDB(db string) error {
 
 	pm := PolicyMap{}
 	for _, policy := range policys {
-		conf.AddDNS(policy.PolicyName, policy.Priority, policy.Addr)
+		if err := conf.AddDNS(policy.PolicyName, policy.Priority, policy.Addr, policy.Typ, policy.Checkdm); err != nil {
+			return err
+		}
+
 		p := policy
 		pm.Add(&p)
 	}
