@@ -79,6 +79,7 @@ create table domain_pool (
 id int not null auto_increment,
 name varchar(127) not null ,
 info varchar(255) not null default "",
+typ varchar(16) not null default "normal",
 enable bool not null default true,
 unavailable smallint unsigned not null default 0,
 domain_monitor bool not null default false,
