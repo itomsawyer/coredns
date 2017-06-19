@@ -219,6 +219,7 @@ CREATE TABLE `domain_pool` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(127) NOT NULL,
   `info` varchar(255) NOT NULL DEFAULT '',
+  `typ` varchar(16) NOT NULL DEFAULT 'normal',
   `enable` tinyint(1) NOT NULL DEFAULT '1',
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0',
   `domain_monitor` tinyint(1) NOT NULL DEFAULT '0',
@@ -233,7 +234,7 @@ CREATE TABLE `domain_pool` (
 
 LOCK TABLES `domain_pool` WRITE;
 /*!40000 ALTER TABLE `domain_pool` DISABLE KEYS */;
-INSERT INTO `domain_pool` VALUES (1,'default','global default',1,0,0);
+INSERT INTO `domain_pool` VALUES (1,'default','global default','normal',1,0,0);
 /*!40000 ALTER TABLE `domain_pool` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -515,7 +516,8 @@ CREATE TABLE `ldns` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `name` varchar(127) NOT NULL,
   `addr` varchar(40) NOT NULL,
-  `typ` varchar(32) NOT NULL DEFAULT 'A',
+  `typ` varchar(32) NOT NULL DEFAULT 'upstream',
+  `checkdm` varchar(64) NOT NULL DEFAULT 'baidu.com',
   `enable` tinyint(1) NOT NULL DEFAULT '1',
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'if other than zero, ldns is unavailable with each bit indicate different reason',
   PRIMARY KEY (`id`),
@@ -529,7 +531,7 @@ CREATE TABLE `ldns` (
 
 LOCK TABLES `ldns` WRITE;
 /*!40000 ALTER TABLE `ldns` DISABLE KEYS */;
-INSERT INTO `ldns` VALUES (1,'default','223.5.5.5','A',1,0);
+INSERT INTO `ldns` VALUES (1,'default','223.5.5.5','upstream','baidu.com',1,0);
 /*!40000 ALTER TABLE `ldns` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -844,6 +846,7 @@ SET character_set_client = utf8;
  1 AS `name`,
  1 AS `addr`,
  1 AS `typ`,
+ 1 AS `checkdm`,
  1 AS `rrset_id`*/;
 SET character_set_client = @saved_cs_client;
 
@@ -1233,7 +1236,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `policy_view` AS select `policy`.`id` AS `policy_id`,`policy`.`name` AS `policy_name`,`policy_detail`.`policy_sequence` AS `policy_sequence`,`policy_detail`.`priority` AS `priority`,`policy_detail`.`weight` AS `weight`,`policy_detail`.`op` AS `op`,`policy_detail`.`op_typ` AS `op_typ`,`policy_detail`.`ldns_id` AS `ldns_id`,`ldns`.`name` AS `name`,`ldns`.`addr` AS `addr`,`ldns`.`typ` AS `typ`,`policy_detail`.`rrset_id` AS `rrset_id` from ((`policy` join `policy_detail`) join `ldns`) where ((`policy`.`id` = `policy_detail`.`policy_id`) and (`ldns`.`id` = `policy_detail`.`ldns_id`) and (`ldns`.`unavailable` = 0) and (`ldns`.`enable` = 1) and (`policy_detail`.`enable` = 1)) */;
+/*!50001 VIEW `policy_view` AS select `policy`.`id` AS `policy_id`,`policy`.`name` AS `policy_name`,`policy_detail`.`policy_sequence` AS `policy_sequence`,`policy_detail`.`priority` AS `priority`,`policy_detail`.`weight` AS `weight`,`policy_detail`.`op` AS `op`,`policy_detail`.`op_typ` AS `op_typ`,`policy_detail`.`ldns_id` AS `ldns_id`,`ldns`.`name` AS `name`,`ldns`.`addr` AS `addr`,`ldns`.`typ` AS `typ`,`ldns`.`checkdm` AS `checkdm`,`policy_detail`.`rrset_id` AS `rrset_id` from ((`policy` join `policy_detail`) join `ldns`) where ((`policy`.`id` = `policy_detail`.`policy_id`) and (`ldns`.`id` = `policy_detail`.`ldns_id`) and (`ldns`.`unavailable` = 0) and (`ldns`.`enable` = 1) and (`policy_detail`.`enable` = 1)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1283,4 +1286,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-06-02 15:28:58
+-- Dump completed on 2017-06-19 16:56:13
