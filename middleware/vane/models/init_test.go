@@ -9,7 +9,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	err := InitDB("root:root@tcp(127.0.0.1:3306)/iwg")
+	err := InitDB("root:@tcp(127.0.0.1:3306)/iwg")
 	orm.Debug = true
 	if err != nil {
 		fmt.Println("cannot launch testing due to init error:", err)

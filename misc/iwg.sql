@@ -79,6 +79,7 @@ create table domain_pool (
 id int not null auto_increment,
 name varchar(127) not null ,
 info varchar(255) not null default "",
+typ varchar(16) not null default "normal",
 enable bool not null default true,
 unavailable smallint unsigned not null default 0,
 domain_monitor bool not null default false,
@@ -238,7 +239,8 @@ create table ldns (
 id int not null auto_increment,
 name varchar(127) not null,
 addr varchar(40) not null,
-typ varchar(32) not null default "A",
+typ varchar(32) not null default "upstream",
+checkdm varchar(64) not null default "baidu.com",
 enable bool not null default true,
 unavailable smallint unsigned not null default 0 comment "if other than zero, ldns is unavailable with each bit indicate different reason",
 primary key(id),
@@ -496,7 +498,7 @@ where a.routeset_id = b.routeset_id and a.netlinkset_id = b.netlinkset_id and a.
 create ALGORITHM = MERGE view policy_view as
 select policy.id as policy_id, policy.name as policy_name,
 policy_detail.policy_sequence, policy_detail.priority, policy_detail.weight, policy_detail.op, policy_detail.op_typ,
-policy_detail.ldns_id, ldns.name, ldns.addr, ldns.typ,
+policy_detail.ldns_id, ldns.name, ldns.addr, ldns.typ, ldns.checkdm,
 policy_detail.rrset_id
 from  policy, policy_detail, ldns
 where policy.id = policy_detail.policy_id and ldns.id = policy_detail.ldns_id 
