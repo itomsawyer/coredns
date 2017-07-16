@@ -217,3 +217,34 @@ Restart=on-failure
 [Install]
 WantedBy=multi-user.target
 ~~~
+
+
+## Code structure
+CONTRIBUTING.md
+core
+coredns                        executable file
+coredns.go                     main entrance
+Corefile                       configure file
+coremain
+directives_generate.go
+Dockerfile
+glide.lock
+glide.yaml
+LICENSE
+Makefile
+Makefile.release
+middleware
+middleware/cache               coredns cache module
+middleware/log                 coredns query log module
+middleware/errors              coredns error log module
+middleware/vane                coredns query and proxy module
+middleware/vane/engine         coredns db loader module
+middleware.cfg                 coredns module configure, a list of which module will be compiled and detemine the order of running of modules
+middleware.md
+misc                           database sql definination 
+README.md
+request
+rpm                            cd rpm ; ./rpm-coredns.sh ; //one click script to make a rpm package
+test 
+utils                          useful tools
+vendor                         third party packages
