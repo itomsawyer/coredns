@@ -5,7 +5,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
-	"time"
+	//"time"
 
 	"github.com/coredns/coredns/middleware"
 	"github.com/coredns/coredns/middleware/vane/models"
@@ -54,42 +54,46 @@ func (v *VaneEngine) Init() error {
 		return err
 	}
 
-	go func() {
-		var ln net.Listener
-		var err error
-		var n int
-
-		for {
-			ln, err = net.Listen("tcp", v.CtlHost)
-			if err == nil {
-				break
-			}
-
-			if n >= 3 {
-				v.Logger.Warn("Failed to start vane engine controller listener: %s", err)
-			}
-
-			time.Sleep(1 * time.Second)
-			n++
-
-			select {
-			case <-time.After(1 * time.Second):
-			case <-v.cancel:
-				v.Logger.Info("vane engine controller stop to serve due to cancel")
-				return
-			}
-		}
-
-		v.ln = ln
-		v.mux = http.NewServeMux()
-		v.mux.HandleFunc("/coredns/reload", v.ReloadHandler)
-
+	/*
 		go func() {
-			v.Logger.Info("vane engine controller start to serve")
-			v.httpServer = &http.Server{Handler: v.mux}
-			v.httpServer.Serve(v.ln)
+			var ln net.Listener
+			var err error
+			var n int
+
+			for {
+				ln, err = net.Listen("tcp", v.CtlHost)
+				if err == nil {
+					v.Logger.Info("vane engine controller stop to serve due to cancel")
+					return
+				}
+
+				if n >= 3 {
+					v.Logger.Warn("Failed to start vane engine controller listener: %s", err)
+					return
+				}
+
+				time.Sleep(1 * time.Second)
+				n++
+
+				select {
+				case <-time.After(1 * time.Second):
+				case <-v.cancel:
+					v.Logger.Info("vane engine controller stop to serve due to cancel")
+					return
+				}
+			}
+
+			v.ln = ln
+			v.mux = http.NewServeMux()
+			v.mux.HandleFunc("/coredns/reload", v.ReloadHandler)
+
+			go func() {
+				v.Logger.Info("vane engine controller start to serve")
+				v.httpServer = &http.Server{Handler: v.mux}
+				v.httpServer.Serve(v.ln)
+			}()
 		}()
-	}()
+	*/
 
 	return nil
 }
@@ -144,7 +148,7 @@ func (v *VaneEngine) Reload() error {
 
 	if v.LMConfig != nil && v.LMConfig.Enable {
 		if lm, err := v.LMConfig.CreateLinkManager(); err != nil {
-			return err
+			return fmt.Errorf("lm manager create error", err)
 		} else {
 			e.LinkManager = lm
 		}
