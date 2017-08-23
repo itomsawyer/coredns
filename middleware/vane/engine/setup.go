@@ -22,8 +22,6 @@ func init() {
 	})
 }
 
-var cnt int
-
 func setup(c *caddy.Controller) error {
 	vane, err := parseVaneEngine(c)
 	if err != nil {
@@ -49,11 +47,6 @@ func setup(c *caddy.Controller) error {
 		} else {
 			vane.Logger.Error("vane engine start fail", err)
 		}
-		if cnt > 0 {
-			vane.Logger.Error("vane engine start fail fake")
-			return fmt.Errorf("fake error")
-		}
-		cnt++
 		return err
 	})
 
