@@ -2,6 +2,7 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"net"
 
 	"github.com/coredns/coredns/core/dnsserver"
@@ -21,6 +22,8 @@ func init() {
 	})
 }
 
+var cnt int
+
 func setup(c *caddy.Controller) error {
 	vane, err := parseVaneEngine(c)
 	if err != nil {
@@ -33,6 +36,9 @@ func setup(c *caddy.Controller) error {
 
 	c.OnStartup(func() (err error) {
 		err = vane.Init()
+		if err != nil {
+			vane.Logger.Error("vane engine start fail", err)
+		}
 		return err
 	})
 
@@ -41,8 +47,13 @@ func setup(c *caddy.Controller) error {
 		if err == nil {
 			vane.Logger.Info("vane engine start success")
 		} else {
-			vane.Logger.Info("vane engine start fail")
+			vane.Logger.Error("vane engine start fail", err)
 		}
+		if cnt > 0 {
+			vane.Logger.Error("vane engine start fail fake")
+			return fmt.Errorf("fake error")
+		}
+		cnt++
 		return err
 	})
 
