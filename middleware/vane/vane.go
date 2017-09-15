@@ -30,6 +30,8 @@ type VaneConfig struct {
 	Debug           bool
 	KeepCNAMEChain  bool
 	KeepUpstreamECS bool
+	AnswerShortly   bool
+	MaxKeepA        int
 
 	LogConfigs []*engine.LogConfig
 }
@@ -309,10 +311,19 @@ try_again:
 			}
 
 			// we got answer, return
+			if v.MaxKeepA > 0 && len(better) > v.MaxKeepA {
+				better = better[:v.MaxKeepA]
+			}
+
 			if cnameSlice := cnameSet.ToSlice(); len(cnameSlice) != 0 && v.KeepCNAMEChain {
 				replyMsg.Answer = append(cnameSlice, better...)
 			} else {
 				replyMsg.Answer = better
+			}
+
+			if v.AnswerShortly {
+				replyMsg.Ns = []dns.RR{}
+				replyMsg.Extra = []dns.RR{}
 			}
 
 			if v.Debug {

@@ -9,11 +9,11 @@ import (
 )
 
 type LDNS struct {
-	Id      int    `orm:"pk"`
-	Name    string `orm:"size(128)"`
-	Addr    string `orm:"size(128)"`
-	Typ     string `orm:"size(128)"`
-	Checkdm string `orm:"size(64)"`
+	Id   int    `orm:"pk"`
+	Name string `orm:"size(128)"`
+	Addr string `orm:"size(128)"`
+	Typ  string `orm:"size(128)"`
+	//	Checkdm string `orm:"size(64)"`
 }
 
 func init() {

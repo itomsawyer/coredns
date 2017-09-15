@@ -20,8 +20,8 @@ type PolicyView struct {
 	Name           string `orm:"size(128)"`
 	Addr           string `orm:"size(128)"`
 	Typ            string `orm:"size(128)"`
-	Checkdm        string `orm:"size(64)"`
-	RrsetId        int
+	//Checkdm        string `orm:"size(64)"`
+	RrsetId int
 }
 
 func init() {

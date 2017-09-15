@@ -2,7 +2,6 @@ package engine
 
 import (
 	"errors"
-	"fmt"
 	"net"
 
 	"github.com/coredns/coredns/core/dnsserver"

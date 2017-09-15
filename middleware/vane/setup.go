@@ -2,6 +2,7 @@ package vane
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/coredns/coredns/core/dnsserver"
@@ -51,6 +52,19 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 
 			for c.NextBlock() {
 				switch c.Val() {
+				case "max_keep_a":
+					args := c.RemainingArgs()
+					if len(args) != 1 {
+						return nil, c.ArgErr()
+					}
+
+					ka, err := strconv.Atoi(args[0])
+					if err != nil {
+						return nil, c.SyntaxErr("max_keep_a expect  int")
+					}
+
+					vane.MaxKeepA = ka
+
 				case "keep_cname_chain":
 					args := c.RemainingArgs()
 					if len(args) != 1 {
@@ -58,6 +72,14 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 					}
 
 					vane.KeepCNAMEChain = parseBool(args[0])
+
+				case "answer_shortly":
+					args := c.RemainingArgs()
+					if len(args) != 1 {
+						return nil, c.ArgErr()
+					}
+
+					vane.AnswerShortly = parseBool(args[0])
 
 				case "keep_upstream_ecs":
 					args := c.RemainingArgs()
