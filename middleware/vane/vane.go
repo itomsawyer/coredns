@@ -31,6 +31,7 @@ type VaneConfig struct {
 	KeepCNAMEChain  bool
 	KeepUpstreamECS bool
 	AnswerShortly   bool
+	ForceNoTrunc    bool
 	MaxKeepA        int
 
 	LogConfigs []*engine.LogConfig
@@ -324,6 +325,10 @@ try_again:
 			if v.AnswerShortly {
 				replyMsg.Ns = []dns.RR{}
 				replyMsg.Extra = []dns.RR{}
+			}
+
+			if v.ForceNoTrunc {
+				replyMsg.Truncated = false
 			}
 
 			if v.Debug {

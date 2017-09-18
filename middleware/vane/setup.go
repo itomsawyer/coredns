@@ -65,6 +65,14 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 
 					vane.MaxKeepA = ka
 
+				case "force_no_trunc":
+					args := c.RemainingArgs()
+					if len(args) != 1 {
+						return nil, c.ArgErr()
+					}
+
+					vane.ForceNoTrunc = parseBool(args[0])
+
 				case "keep_cname_chain":
 					args := c.RemainingArgs()
 					if len(args) != 1 {
