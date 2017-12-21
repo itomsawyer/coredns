@@ -182,6 +182,75 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
+-- Temporary view structure for view `dns_forward_view`
+--
+
+DROP TABLE IF EXISTS `dns_forward_view`;
+/*!50001 DROP VIEW IF EXISTS `dns_forward_view`*/;
+SET @saved_cs_client     = @@character_set_client;
+SET character_set_client = utf8;
+/*!50001 CREATE VIEW `dns_forward_view` AS SELECT 
+ 1 AS `zone_id`,
+ 1 AS `dm`,
+ 1 AS `forward_typ`,
+ 1 AS `ldns_name`,
+ 1 AS `ldns_addr`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Table structure for table `dns_forward_zone`
+--
+
+DROP TABLE IF EXISTS `dns_forward_zone`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dns_forward_zone` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `dm` varchar(255) DEFAULT NULL,
+  `typ` varchar(16) NOT NULL DEFAULT 'only',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `dm_UNIQUE` (`dm`)
+) ENGINE=InnoDB AUTO_INCREMENT=220 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dns_forward_zone`
+--
+
+LOCK TABLES `dns_forward_zone` WRITE;
+/*!40000 ALTER TABLE `dns_forward_zone` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dns_forward_zone` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `dns_forwarders`
+--
+
+DROP TABLE IF EXISTS `dns_forwarders`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dns_forwarders` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `zone_id` int(11) DEFAULT NULL,
+  `ldns_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `zone_id_idx` (`zone_id`),
+  KEY `ldns_id_idx` (`ldns_id`),
+  CONSTRAINT `ldns_id` FOREIGN KEY (`ldns_id`) REFERENCES `ldns` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
+  CONSTRAINT `zone_id` FOREIGN KEY (`zone_id`) REFERENCES `dns_forward_zone` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB AUTO_INCREMENT=284 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `dns_forwarders`
+--
+
+LOCK TABLES `dns_forwarders` WRITE;
+/*!40000 ALTER TABLE `dns_forwarders` DISABLE KEYS */;
+/*!40000 ALTER TABLE `dns_forwarders` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `domain`
 --
 
@@ -846,7 +915,6 @@ SET character_set_client = utf8;
  1 AS `name`,
  1 AS `addr`,
  1 AS `typ`,
- 1 AS `checkdm`,
  1 AS `rrset_id`*/;
 SET character_set_client = @saved_cs_client;
 
@@ -1116,6 +1184,24 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
+-- Final view structure for view `dns_forward_view`
+--
+
+/*!50001 DROP VIEW IF EXISTS `dns_forward_view`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = utf8 */;
+/*!50001 SET character_set_results     = utf8 */;
+/*!50001 SET collation_connection      = utf8_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `dns_forward_view` AS select `dns_forward_zone`.`id` AS `zone_id`,`dns_forward_zone`.`dm` AS `dm`,`dns_forward_zone`.`typ` AS `forward_typ`,`ldns`.`name` AS `ldns_name`,`ldns`.`addr` AS `ldns_addr` from ((`dns_forward_zone` join `dns_forwarders`) join `ldns`) where ((`ldns`.`id` = `dns_forwarders`.`ldns_id`) and (`dns_forward_zone`.`id` = `dns_forwarders`.`zone_id`)) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
 -- Final view structure for view `domain_view`
 --
 
@@ -1236,7 +1322,7 @@ UNLOCK TABLES;
 /*!50001 SET collation_connection      = utf8_general_ci */;
 /*!50001 CREATE ALGORITHM=MERGE */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `policy_view` AS select `policy`.`id` AS `policy_id`,`policy`.`name` AS `policy_name`,`policy_detail`.`policy_sequence` AS `policy_sequence`,`policy_detail`.`priority` AS `priority`,`policy_detail`.`weight` AS `weight`,`policy_detail`.`op` AS `op`,`policy_detail`.`op_typ` AS `op_typ`,`policy_detail`.`ldns_id` AS `ldns_id`,`ldns`.`name` AS `name`,`ldns`.`addr` AS `addr`,`ldns`.`typ` AS `typ`,`ldns`.`checkdm` AS `checkdm`,`policy_detail`.`rrset_id` AS `rrset_id` from ((`policy` join `policy_detail`) join `ldns`) where ((`policy`.`id` = `policy_detail`.`policy_id`) and (`ldns`.`id` = `policy_detail`.`ldns_id`) and (`ldns`.`unavailable` = 0) and (`ldns`.`enable` = 1) and (`policy_detail`.`enable` = 1)) */;
+/*!50001 VIEW `policy_view` AS select `policy`.`id` AS `policy_id`,`policy`.`name` AS `policy_name`,`policy_detail`.`policy_sequence` AS `policy_sequence`,`policy_detail`.`priority` AS `priority`,`policy_detail`.`weight` AS `weight`,`policy_detail`.`op` AS `op`,`policy_detail`.`op_typ` AS `op_typ`,`policy_detail`.`ldns_id` AS `ldns_id`,`ldns`.`name` AS `name`,`ldns`.`addr` AS `addr`,`ldns`.`typ` AS `typ`,`policy_detail`.`rrset_id` AS `rrset_id` from ((`policy` join `policy_detail`) join `ldns`) where ((`policy`.`id` = `policy_detail`.`policy_id`) and (`ldns`.`id` = `policy_detail`.`ldns_id`) and (`ldns`.`unavailable` = 0) and (`ldns`.`enable` = 1) and (`policy_detail`.`enable` = 1)) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -1286,4 +1372,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-06-19 16:56:13
+-- Dump completed on 2017-12-21 14:10:35
