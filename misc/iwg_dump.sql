@@ -19,6 +19,9 @@
 -- Table structure for table `_locker`
 --
 
+CREATE SCHEMA IF NOT EXISTS `iwg` DEFAULT CHARACTER SET utf8 ;
+USE `iwg` ;
+
 DROP TABLE IF EXISTS `_locker`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
@@ -210,7 +213,7 @@ CREATE TABLE `dns_forward_zone` (
   `typ` varchar(16) NOT NULL DEFAULT 'only',
   PRIMARY KEY (`id`),
   UNIQUE KEY `dm_UNIQUE` (`dm`)
-) ENGINE=InnoDB AUTO_INCREMENT=220 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=220 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -238,7 +241,7 @@ CREATE TABLE `dns_forwarders` (
   KEY `ldns_id_idx` (`ldns_id`),
   CONSTRAINT `ldns_id` FOREIGN KEY (`ldns_id`) REFERENCES `ldns` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `zone_id` FOREIGN KEY (`zone_id`) REFERENCES `dns_forward_zone` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=284 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=284 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -601,6 +604,7 @@ CREATE TABLE `ldns` (
 LOCK TABLES `ldns` WRITE;
 /*!40000 ALTER TABLE `ldns` DISABLE KEYS */;
 INSERT INTO `ldns` VALUES (1,'default','223.5.5.5','upstream','baidu.com',1,0);
+INSERT INTO `ldns` VALUES (2,'ali_public_dns_2','223.6.6.6','upstream','baidu.com',1,0);
 /*!40000 ALTER TABLE `ldns` ENABLE KEYS */;
 UNLOCK TABLES;
 
