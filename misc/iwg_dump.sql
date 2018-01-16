@@ -1,8 +1,8 @@
--- MySQL dump 10.13  Distrib 5.7.17, for macos10.12 (x86_64)
+-- MySQL dump 10.13  Distrib 5.6.36, for Linux (x86_64)
 --
 -- Host: localhost    Database: iwg
 -- ------------------------------------------------------
--- Server version	5.6.35
+-- Server version	5.6.36
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -18,9 +18,6 @@
 --
 -- Table structure for table `_locker`
 --
-
-CREATE SCHEMA IF NOT EXISTS `iwg` DEFAULT CHARACTER SET utf8 ;
-USE `iwg` ;
 
 DROP TABLE IF EXISTS `_locker`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -65,7 +62,7 @@ CREATE TABLE `_locker` (
   CONSTRAINT `_locker_ibfk_7` FOREIGN KEY (`netlinkset_id`) REFERENCES `netlinkset` (`id`),
   CONSTRAINT `_locker_ibfk_8` FOREIGN KEY (`route_id`) REFERENCES `route` (`id`),
   CONSTRAINT `_locker_ibfk_9` FOREIGN KEY (`outlink_id`) REFERENCES `outlink` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='Internal lock for default data, DO NOT MODIFY unless you known what you are doing';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Internal lock for default data, DO NOT MODIFY unless you known what you are doing';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -79,7 +76,7 @@ INSERT INTO `_locker` VALUES (1,'global default data locker',1,1,1,1,1,1,1,1,1,1
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `base_route_view`
+-- Temporary table structure for view `base_route_view`
 --
 
 DROP TABLE IF EXISTS `base_route_view`;
@@ -105,7 +102,7 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary view structure for view `best_route_view`
+-- Temporary table structure for view `best_route_view`
 --
 
 DROP TABLE IF EXISTS `best_route_view`;
@@ -131,7 +128,7 @@ CREATE TABLE `clientset` (
   `info` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='client ipnet set';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='client ipnet set';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -145,7 +142,7 @@ INSERT INTO `clientset` VALUES (1,'default','global default');
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `clientset_view`
+-- Temporary table structure for view `clientset_view`
 --
 
 DROP TABLE IF EXISTS `clientset_view`;
@@ -165,7 +162,7 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary view structure for view `clientset_wl_view`
+-- Temporary table structure for view `clientset_wl_view`
 --
 
 DROP TABLE IF EXISTS `clientset_wl_view`;
@@ -185,7 +182,73 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary view structure for view `dns_forward_view`
+-- Table structure for table `cp`
+--
+
+DROP TABLE IF EXISTS `cp`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `cp` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `neighbor` varchar(64) NOT NULL,
+  `status` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `lastup` timestamp NULL DEFAULT NULL,
+  `lastdown` timestamp NULL DEFAULT NULL,
+  `prefixes` mediumint(8) unsigned NOT NULL DEFAULT '0',
+  `updown` mediumint(8) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `neighbor` (`neighbor`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cp`
+--
+
+LOCK TABLES `cp` WRITE;
+/*!40000 ALTER TABLE `cp` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cp` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `cproute`
+--
+
+DROP TABLE IF EXISTS `cproute`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `cproute` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `neighbor` varchar(64) NOT NULL,
+  `prefix` varchar(64) NOT NULL,
+  `length` tinyint(3) unsigned NOT NULL,
+  `ip_start` decimal(39,0) NOT NULL,
+  `ip_end` decimal(39,0) NOT NULL,
+  `aspath` varchar(512) NOT NULL,
+  `nexthop` varchar(64) NOT NULL,
+  `community` text NOT NULL,
+  `extended_community` text NOT NULL,
+  `origin` varchar(10) NOT NULL,
+  `originas` int(10) unsigned NOT NULL,
+  `time` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `cp_prefix` (`neighbor`,`prefix`),
+  KEY `prefix` (`prefix`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `cproute`
+--
+
+LOCK TABLES `cproute` WRITE;
+/*!40000 ALTER TABLE `cproute` DISABLE KEYS */;
+/*!40000 ALTER TABLE `cproute` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Temporary table structure for view `dns_forward_view`
 --
 
 DROP TABLE IF EXISTS `dns_forward_view`;
@@ -213,7 +276,7 @@ CREATE TABLE `dns_forward_zone` (
   `typ` varchar(16) NOT NULL DEFAULT 'only',
   PRIMARY KEY (`id`),
   UNIQUE KEY `dm_UNIQUE` (`dm`)
-) ENGINE=InnoDB AUTO_INCREMENT=220 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -241,7 +304,7 @@ CREATE TABLE `dns_forwarders` (
   KEY `ldns_id_idx` (`ldns_id`),
   CONSTRAINT `ldns_id` FOREIGN KEY (`ldns_id`) REFERENCES `ldns` (`id`) ON DELETE NO ACTION ON UPDATE NO ACTION,
   CONSTRAINT `zone_id` FOREIGN KEY (`zone_id`) REFERENCES `dns_forward_zone` (`id`) ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=284 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -297,7 +360,7 @@ CREATE TABLE `domain_pool` (
   `domain_monitor` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='serve domains set';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='serve domains set';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -311,7 +374,7 @@ INSERT INTO `domain_pool` VALUES (1,'default','global default','normal',1,0,0);
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `domain_view`
+-- Temporary table structure for view `domain_view`
 --
 
 DROP TABLE IF EXISTS `domain_view`;
@@ -346,7 +409,7 @@ CREATE TABLE `domainlink` (
   CONSTRAINT `domainlink_ibfk_1` FOREIGN KEY (`domain_pool_id`) REFERENCES `domain_pool` (`id`),
   CONSTRAINT `domainlink_ibfk_2` FOREIGN KEY (`netlink_id`) REFERENCES `netlink` (`id`),
   CONSTRAINT `domainlink_ibfk_3` FOREIGN KEY (`netlinkset_id`) REFERENCES `netlinkset` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='bind domain_pool and netlink to a netlinkset';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='bind domain_pool and netlink to a netlinkset';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -360,7 +423,7 @@ INSERT INTO `domainlink` VALUES (1,1,1,1,1);
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `dst_view`
+-- Temporary table structure for view `dst_view`
 --
 
 DROP TABLE IF EXISTS `dst_view`;
@@ -421,7 +484,7 @@ LOCK TABLES `filter` WRITE;
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `filter_view`
+-- Temporary table structure for view `filter_view`
 --
 
 DROP TABLE IF EXISTS `filter_view`;
@@ -594,7 +657,7 @@ CREATE TABLE `ldns` (
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'if other than zero, ldns is unavailable with each bit indicate different reason',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='upstream ldns info';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='upstream ldns info';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -604,7 +667,6 @@ CREATE TABLE `ldns` (
 LOCK TABLES `ldns` WRITE;
 /*!40000 ALTER TABLE `ldns` DISABLE KEYS */;
 INSERT INTO `ldns` VALUES (1,'default','223.5.5.5','upstream','baidu.com',1,0);
-INSERT INTO `ldns` VALUES (2,'ali_public_dns_2','223.6.6.6','upstream','baidu.com',1,0);
 /*!40000 ALTER TABLE `ldns` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -680,7 +742,7 @@ CREATE TABLE `netlink` (
   `typ` varchar(32) NOT NULL DEFAULT 'normal',
   PRIMARY KEY (`id`),
   UNIQUE KEY `isp` (`isp`,`region`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='netlink (isp + province or CP) of a target ip';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='netlink (isp + province or CP) of a target ip';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -689,12 +751,12 @@ CREATE TABLE `netlink` (
 
 LOCK TABLES `netlink` WRITE;
 /*!40000 ALTER TABLE `netlink` DISABLE KEYS */;
-INSERT INTO `netlink` VALUES (1,'default','global default','normal');
+INSERT INTO `netlink` VALUES (1,'default','global default','normal'),(2,'cp','cp','normal');
 /*!40000 ALTER TABLE `netlink` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `netlink_view`
+-- Temporary table structure for view `netlink_view`
 --
 
 DROP TABLE IF EXISTS `netlink_view`;
@@ -716,7 +778,7 @@ SET character_set_client = utf8;
 SET character_set_client = @saved_cs_client;
 
 --
--- Temporary view structure for view `netlink_wl_view`
+-- Temporary table structure for view `netlink_wl_view`
 --
 
 DROP TABLE IF EXISTS `netlink_wl_view`;
@@ -749,7 +811,7 @@ CREATE TABLE `netlinkset` (
   `name` varchar(127) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='netlink set ';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='netlink set ';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -805,7 +867,7 @@ CREATE TABLE `outlink` (
   `unavailable` smallint(5) unsigned NOT NULL DEFAULT '0' COMMENT 'if other than zero, outlink is unavailable, each bit indicate different reason',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='network gateway, aka outlink';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='network gateway, aka outlink';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -819,7 +881,7 @@ INSERT INTO `outlink` VALUES (1,'default','0.0.0.0','normal',1,0);
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `outlink_view`
+-- Temporary table structure for view `outlink_view`
 --
 
 DROP TABLE IF EXISTS `outlink_view`;
@@ -848,7 +910,7 @@ CREATE TABLE `policy` (
   `name` varchar(127) NOT NULL,
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='policy index of choose ldns upstream forwarder';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='policy index of choose ldns upstream forwarder';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -886,7 +948,7 @@ CREATE TABLE `policy_detail` (
   CONSTRAINT `policy_detail_ibfk_1` FOREIGN KEY (`ldns_id`) REFERENCES `ldns` (`id`),
   CONSTRAINT `policy_detail_ibfk_2` FOREIGN KEY (`rrset_id`) REFERENCES `rrset` (`id`),
   CONSTRAINT `policy_detail_ibfk_3` FOREIGN KEY (`policy_id`) REFERENCES `policy` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='policy detail of choose ldns upstream forwarder';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='policy detail of choose ldns upstream forwarder';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -900,7 +962,7 @@ INSERT INTO `policy_detail` VALUES (1,1,0,1,20,100,'and','builtin',1,NULL);
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `policy_view`
+-- Temporary table structure for view `policy_view`
 --
 
 DROP TABLE IF EXISTS `policy_view`;
@@ -946,7 +1008,7 @@ CREATE TABLE `route` (
   CONSTRAINT `route_ibfk_1` FOREIGN KEY (`outlink_id`) REFERENCES `outlink` (`id`),
   CONSTRAINT `route_ibfk_2` FOREIGN KEY (`netlinkset_id`) REFERENCES `netlinkset` (`id`),
   CONSTRAINT `route_ibfk_3` FOREIGN KEY (`routeset_id`) REFERENCES `routeset` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='Performance of using gateway to serve paricular netlink';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='Performance of using gateway to serve paricular netlink';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -960,7 +1022,7 @@ INSERT INTO `route` VALUES (1,1,1,1,1,20,50,0);
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `route_view`
+-- Temporary table structure for view `route_view`
 --
 
 DROP TABLE IF EXISTS `route_view`;
@@ -994,7 +1056,7 @@ CREATE TABLE `routeset` (
   `info` varchar(255) NOT NULL DEFAULT '',
   PRIMARY KEY (`id`),
   UNIQUE KEY `name` (`name`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1061,7 +1123,7 @@ LOCK TABLES `rrset` WRITE;
 UNLOCK TABLES;
 
 --
--- Temporary view structure for view `src_view`
+-- Temporary table structure for view `src_view`
 --
 
 DROP TABLE IF EXISTS `src_view`;
@@ -1102,7 +1164,7 @@ CREATE TABLE `viewer` (
   CONSTRAINT `viewer_ibfk_2` FOREIGN KEY (`domain_pool_id`) REFERENCES `domain_pool` (`id`),
   CONSTRAINT `viewer_ibfk_3` FOREIGN KEY (`routeset_id`) REFERENCES `routeset` (`id`),
   CONSTRAINT `viewer_ibfk_4` FOREIGN KEY (`policy_id`) REFERENCES `policy` (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=2 DEFAULT CHARSET=utf8 COMMENT='map of <clientset , domain_pool> -> <policy, routeset>';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 COMMENT='map of <clientset , domain_pool> -> <policy, routeset>';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -1376,4 +1438,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2017-12-21 14:10:35
+-- Dump completed on 2018-01-15 20:08:30
