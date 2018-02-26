@@ -8,11 +8,12 @@ import (
 
 	"github.com/coredns/coredns/middleware/pkg/singleflight"
 
+	"supermq"
+
 	"github.com/astaxie/beego/logs"
 	"github.com/hashicorp/golang-lru"
 	"github.com/mholt/caddy"
 	"github.com/nsqio/go-nsq"
-	"supermq"
 )
 
 var (
@@ -199,6 +200,10 @@ func (m *LinkManager) Stop() {
 	if m.reader != nil {
 		m.reader.Stop()
 		m.logger.Info("stop link manager reader")
+	}
+
+	if m.logger != nil {
+		m.logger.Close()
 	}
 }
 

@@ -127,6 +127,10 @@ func (v *VaneEngine) Stop() {
 		v.httpServer.Close()
 	}
 
+	if v.Logger != nil {
+		v.Logger.Close()
+	}
+
 	close(v.cancel)
 }
 
