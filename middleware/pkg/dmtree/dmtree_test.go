@@ -251,7 +251,7 @@ func TestDmTreeNilValue(t *testing.T) {
 		t.Errorf("unexpected found")
 	}
 
-	_, ok = df.Find("")
+	_, ok = dt.Find("")
 	if ok {
 		t.Errorf("unexpected found")
 	}
