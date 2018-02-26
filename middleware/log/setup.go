@@ -51,28 +51,33 @@ func setup(c *caddy.Controller) error {
 				if err != nil {
 					return middleware.Error("log", err)
 				}
-				writer = file
+				file.Close()
 				logFile = true
-
 			}
 
 			rules[i].Log = log.New(writer, "", 0)
 			if logFile {
-				rules[i].Log.SetOutput(&lumberjack.Logger{
+				lj := &lumberjack.Logger{
 					Filename:   rules[i].OutputFile,
 					MaxSize:    rules[i].MaxSize,    // megabytes after which new file is created
 					MaxBackups: rules[i].MaxBackups, // number of backups
 					MaxAge:     rules[i].MaxAge,     //days
 					LocalTime:  true,
-				})
+				}
+				rules[i].Log.SetOutput(lj)
+				rules[i].LogCloser = lj
 			}
 		}
 
 		return nil
 	})
 
+	l := Logger{Rules: rules, ErrorFunc: dnsserver.DefaultErrorFunc}
+	c.OnShutdown(l.Close)
+
 	dnsserver.GetConfig(c).AddMiddleware(func(next middleware.Handler) middleware.Handler {
-		return Logger{Next: next, Rules: rules, ErrorFunc: dnsserver.DefaultErrorFunc}
+		l.Next = next
+		return l
 	})
 
 	return nil

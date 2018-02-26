@@ -2,6 +2,7 @@
 package log
 
 import (
+	"io"
 	"log"
 	"time"
 
@@ -22,6 +23,18 @@ type Logger struct {
 	Next      middleware.Handler
 	Rules     []Rule
 	ErrorFunc func(dns.ResponseWriter, *dns.Msg, int) // failover error handler
+}
+
+func (l Logger) Close() error {
+	for _, rule := range l.Rules {
+		if rule.LogCloser != nil {
+			if err := rule.LogCloser.Close(); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 // ServeDNS implements the middleware.Handler interface.
@@ -77,6 +90,7 @@ type Rule struct {
 	MaxSize    int
 	MaxBackups int
 	Log        *log.Logger
+	LogCloser  io.Closer
 }
 
 const (

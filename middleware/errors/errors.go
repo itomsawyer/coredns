@@ -3,6 +3,7 @@ package errors
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"runtime"
 	"strings"
@@ -20,10 +21,19 @@ type errorHandler struct {
 	Next       middleware.Handler
 	LogFile    string
 	Log        *log.Logger
+	LogCloser  io.Closer
 	Debug      bool // if true, errors are written out to client rather than to a log
 	MaxAge     int
 	MaxSize    int
 	MaxBackups int
+}
+
+func (h errorHandler) Close() error {
+	if h.LogCloser != nil {
+		return h.LogCloser.Close()
+	}
+
+	return nil
 }
 
 // ServeDNS implements the middleware.Handler interface.
