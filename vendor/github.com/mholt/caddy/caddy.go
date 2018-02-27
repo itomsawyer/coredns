@@ -188,13 +188,13 @@ func (i *Instance) Restart(newCaddyfile Input) (*Instance, error) {
 	}
 
 	// success! stop the old instance
+	i.Stop()
 	for _, shutdownFunc := range i.onShutdown {
 		err := shutdownFunc()
 		if err != nil {
 			return i, err
 		}
 	}
-	i.Stop()
 
 	log.Println("[INFO] Reloading complete")
 

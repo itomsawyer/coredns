@@ -97,6 +97,7 @@ func Run() {
 		p := &os.Process{Pid: pid}
 		if err := p.Signal(syscall.SIGUSR1); err != nil {
 			fmt.Println("sending reload signal failed", err)
+			os.Exit(1)
 		}
 		os.Exit(0)
 	}

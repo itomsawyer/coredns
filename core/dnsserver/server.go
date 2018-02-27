@@ -14,10 +14,13 @@ import (
 	"github.com/coredns/coredns/middleware/pkg/edns"
 	"github.com/coredns/coredns/middleware/pkg/rcode"
 	"github.com/coredns/coredns/request"
+	"github.com/mholt/caddy"
 
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
+
+var _ caddy.GracefulServer = (*Server)(nil)
 
 // Server represents an instance of a server, which serves
 // DNS requests at a particular address (host and port). A
