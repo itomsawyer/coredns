@@ -112,3 +112,9 @@ func (c *Cache) Len() int {
 	defer c.lock.RUnlock()
 	return c.lru.Len()
 }
+
+func (c *Cache) SetLen(size int) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.lru.SetLen(size)
+}

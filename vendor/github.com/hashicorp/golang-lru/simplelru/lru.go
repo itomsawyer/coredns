@@ -141,6 +141,10 @@ func (c *LRU) Len() int {
 	return c.evictList.Len()
 }
 
+func (c *LRU) SetLen(size int) {
+	c.size = size
+}
+
 // removeOldest removes the oldest item from the cache.
 func (c *LRU) removeOldest() {
 	ent := c.evictList.Back()

@@ -3,6 +3,7 @@ package cache
 import (
 	"fmt"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/coredns/coredns/core/dnsserver"
@@ -11,6 +12,9 @@ import (
 	"github.com/hashicorp/golang-lru"
 	"github.com/mholt/caddy"
 )
+
+var reuse *Cache
+var lock sync.Mutex
 
 func init() {
 	caddy.RegisterPlugin("cache", caddy.Plugin{
@@ -29,9 +33,26 @@ func setup(c *caddy.Controller) error {
 		return ca
 	})
 
-	// Export the capacity for the metrics. This only happens once, because this is a re-load change only.
-	cacheCapacity.WithLabelValues(Success).Set(float64(ca.pcap))
-	cacheCapacity.WithLabelValues(Denial).Set(float64(ca.ncap))
+	c.OnStartup(func() error {
+		lock.Lock()
+		defer lock.Unlock()
+
+		if reuse != nil {
+			ca.pcache = reuse.pcache
+			ca.pcache.SetLen(ca.pcap)
+
+			ca.ncache = reuse.ncache
+			ca.ncache.SetLen(ca.ncap)
+		}
+
+		reuse = ca
+
+		// Export the capacity for the metrics. This only happens once, because this is a re-load change only.
+		cacheCapacity.WithLabelValues(Success).Set(float64(ca.pcap))
+		cacheCapacity.WithLabelValues(Denial).Set(float64(ca.ncap))
+
+		return nil
+	})
 
 	return nil
 }
