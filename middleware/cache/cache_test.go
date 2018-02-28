@@ -102,7 +102,7 @@ func newTestCache(ttl time.Duration) (*Cache, *ResponseWriter) {
 	c.pcache, _ = lru.New(c.pcap)
 	c.ncache, _ = lru.New(c.ncap)
 
-	crr := &ResponseWriter{nil, c}
+	crr := &ResponseWriter{nil, c, "", false}
 	return c, crr
 }
 
@@ -117,19 +117,20 @@ func TestCache(t *testing.T) {
 		do := tc.in.Do
 
 		mt, _ := response.Typify(m)
-		k := key(m, mt, do)
+		k := key(m, mt, do, "")
 		crr.set(m, k, mt, c.pttl)
 
 		name := middleware.Name(m.Question[0].Name).Normalize()
 		qtype := m.Question[0].Qtype
-		i, ok, _ := c.get(name, qtype, do)
-		if ok && m.Truncated {
+		i, _ := c.get(time.Now(), name, qtype, do, "")
+
+		if i != nil && m.Truncated {
 			t.Errorf("Truncated message should not have been cached")
 			continue
 		}
 
-		if ok {
-			resp := i.toMsg(m)
+		if i != nil {
+			resp := i.toMsg(m, 1)
 
 			if !test.Header(t, tc.Case, resp) {
 				t.Logf("%v\n", resp)

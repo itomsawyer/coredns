@@ -59,7 +59,7 @@ func setup(c *caddy.Controller) error {
 
 func cacheParse(c *caddy.Controller) (*Cache, error) {
 
-	ca := &Cache{pcap: defaultCap, ncap: defaultCap, pttl: maxTTL, nttl: maxNTTL}
+	ca := &Cache{pcap: defaultCap, ncap: defaultCap, pttl: maxTTL, nttl: maxNTTL, now: time.Now}
 
 	for c.Next() {
 		// cache [ttl] [zones..]
@@ -99,7 +99,19 @@ func cacheParse(c *caddy.Controller) (*Cache, error) {
 				}
 				ca.pcap = pcap
 				if len(args) > 1 {
-					pttl, err := strconv.Atoi(args[1])
+					pmttl, err := strconv.Atoi(args[1])
+					if err != nil {
+						return nil, err
+					}
+					// Reserve 0 (and smaller for future things)
+					if pmttl <= 0 {
+						return nil, fmt.Errorf("cache TTL can not be zero or negative: %d", pmttl)
+					}
+					ca.pminttl = time.Duration(pmttl) * time.Second
+				}
+
+				if len(args) > 2 {
+					pttl, err := strconv.Atoi(args[2])
 					if err != nil {
 						return nil, err
 					}
@@ -120,7 +132,18 @@ func cacheParse(c *caddy.Controller) (*Cache, error) {
 				}
 				ca.ncap = ncap
 				if len(args) > 1 {
-					nttl, err := strconv.Atoi(args[1])
+					nmttl, err := strconv.Atoi(args[1])
+					if err != nil {
+						return nil, err
+					}
+					// Reserve 0 (and smaller for future things)
+					if nmttl <= 0 {
+						return nil, fmt.Errorf("cache TTL can not be zero or negative: %d", nmttl)
+					}
+					ca.nminttl = time.Duration(nmttl) * time.Second
+				}
+				if len(args) > 2 {
+					nttl, err := strconv.Atoi(args[2])
 					if err != nil {
 						return nil, err
 					}
@@ -130,6 +153,44 @@ func cacheParse(c *caddy.Controller) (*Cache, error) {
 					}
 					ca.nttl = time.Duration(nttl) * time.Second
 				}
+			case "prefetch":
+				args := c.RemainingArgs()
+				if len(args) == 0 || len(args) > 3 {
+					return nil, c.ArgErr()
+				}
+				amount, err := strconv.Atoi(args[0])
+				if err != nil {
+					return nil, err
+				}
+				if amount < 0 {
+					return nil, fmt.Errorf("prefetch amount should be positive: %d", amount)
+				}
+				ca.prefetch = amount
+
+				if len(args) > 1 {
+					dur, err := time.ParseDuration(args[1])
+					if err != nil {
+						return nil, err
+					}
+					ca.duration = dur
+				}
+				if len(args) > 2 {
+					pct := args[2]
+					if x := pct[len(pct)-1]; x != '%' {
+						return nil, fmt.Errorf("last character of percentage should be `%%`, but is: %q", x)
+					}
+					pct = pct[:len(pct)-1]
+
+					num, err := strconv.Atoi(pct)
+					if err != nil {
+						return nil, err
+					}
+					if num < 10 || num > 90 {
+						return nil, fmt.Errorf("percentage should fall in range [10, 90]: %d", num)
+					}
+					ca.percentage = num
+				}
+
 			default:
 				return nil, c.ArgErr()
 			}

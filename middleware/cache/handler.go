@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"math"
 	"strconv"
 	"time"
 
@@ -40,11 +41,34 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 
 	do := state.Do() // TODO(): might need more from OPT record? Like the actual bufsize?
 
-	if i, ok, expired := c.get(qname, qtype, do, tag); ok && !expired {
-		resp := i.toMsg(r)
+	now := c.now().UTC()
+	i, ttl := c.get(now, qname, qtype, do, tag)
+	if i != nil && ttl > 0 {
+		resp := i.toMsg(r, uint32(c.pminttl.Seconds()))
 		state.SizeAndDo(resp)
 		resp, _ = state.Scrub(resp)
 		w.WriteMsg(resp)
+
+		if c.prefetch > 0 {
+			i.Freq.Update(c.duration, now)
+
+			threshold := int(math.Ceil(float64(c.percentage) / 100 * float64(i.origTTL)))
+
+			if i.Freq.Hits() >= c.prefetch && ttl <= threshold {
+				go func() {
+					cachePrefetches.Inc()
+					// When prefetching we loose the item i, and with it the frequency
+					// that we've gathered sofar. See we copy the frequencies info back
+					// into the new item that was stored in the cache.
+					prr := &ResponseWriter{ResponseWriter: w, Cache: c, prefetch: true, Tag: tag}
+					middleware.NextOrFailure(c.Name(), c.Next, ctx, prr, r)
+
+					if i1 := c.exists(qname, qtype, do, tag); i1 != nil {
+						i1.Freq.Reset(now, i.Freq.Hits())
+					}
+				}()
+			}
+		}
 
 		return dns.RcodeSuccess, nil
 	}
@@ -60,20 +84,31 @@ func (c *Cache) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) 
 // Name implements the Handler interface.
 func (c *Cache) Name() string { return "cache" }
 
-func (c *Cache) get(qname string, qtype uint16, do bool, keySuffix string) (*item, bool, bool) {
+func (c *Cache) get(now time.Time, qname string, qtype uint16, do bool, keySuffix string) (*item, int) {
 	k := rawKey(qname, qtype, do, keySuffix)
 
 	if i, ok := c.ncache.Get(k); ok {
 		cacheHits.WithLabelValues(Denial).Inc()
-		return i.(*item), ok, i.(*item).expired(time.Now())
+		return i.(*item), i.(*item).ttl(now)
 	}
 
 	if i, ok := c.pcache.Get(k); ok {
 		cacheHits.WithLabelValues(Success).Inc()
-		return i.(*item), ok, i.(*item).expired(time.Now())
+		return i.(*item), i.(*item).ttl(now)
 	}
 	cacheMisses.Inc()
-	return nil, false, false
+	return nil, 0
+}
+
+func (c *Cache) exists(qname string, qtype uint16, do bool, keySuffix string) *item {
+	k := rawKey(qname, qtype, do, keySuffix)
+	if i, ok := c.ncache.Get(k); ok {
+		return i.(*item)
+	}
+	if i, ok := c.pcache.Get(k); ok {
+		return i.(*item)
+	}
+	return nil
 }
 
 var (
@@ -103,6 +138,13 @@ var (
 		Subsystem: subsystem,
 		Name:      "misses_total",
 		Help:      "The count of cache misses.",
+	})
+
+	cachePrefetches = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: middleware.Namespace,
+		Subsystem: "cache",
+		Name:      "prefetch_total",
+		Help:      "The number of time the cache has prefetched a cached item.",
 	})
 )
 
