@@ -24,6 +24,7 @@ If you want more control:
 cache [TTL] [ZONES...] {
     success CAPACITY [TTL]
     denial CAPACITY [TTL]
+    prefetch AMOUNT [[DURATION] [PERCENTAGE%]]
 }
 ~~~
 
@@ -32,6 +33,12 @@ cache [TTL] [ZONES...] {
   number of packets we cache before we start evicting (LRU). **TTL** overrides the cache maximum TTL.
 * `denial`, override the settings for caching denial of existence responses, **CAPACITY** indicates the maximum
   number of packets we cache before we start evicting (LRU). **TTL** overrides the cache maximum TTL.
+* `prefetch` will prefetch popular items when they are about to be expunged from the cache.
+  Popular means **AMOUNT** queries have been seen with no gaps of **DURATION** or more between them.
+  **DURATION** defaults to 1m. Prefetching will happen when the TTL drops below **PERCENTAGE**,
+  which defaults to `10%`, or latest 1 second before TTL expiration. Values should be in the range `[10%, 90%]`.
+  Note the percent sign is mandatory. **PERCENTAGE** is treated as an `int`.
+
 
 There is a third category (`error`) but those responses are never cached.
 
