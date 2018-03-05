@@ -3,14 +3,14 @@ package engine
 import (
 	"github.com/coredns/coredns/middleware/pkg/dnsutil"
 	"github.com/coredns/coredns/middleware/vane/models"
+	"github.com/itomsawyer/llog"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/astaxie/beego/orm"
 )
 
 type EngineBuilder struct {
 	DBName          string
-	Logger          *logs.BeeLogger
+	Logger          *llog.Logger
 	ClientSetView   []models.ClientSetView
 	ClientSetWLView []models.ClientSetWLView
 	NetLinkView     []models.NetLinkView

@@ -10,8 +10,8 @@ import (
 	"github.com/coredns/coredns/middleware/pkg/edns"
 	"github.com/coredns/coredns/middleware/vane/engine"
 	"github.com/coredns/coredns/request"
+	"github.com/itomsawyer/llog"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
@@ -19,7 +19,7 @@ import (
 type Vane struct {
 	VaneConfig
 
-	Logger        *logs.BeeLogger
+	Logger        *llog.Logger
 	RcodePriority *RcodePriority
 	Next          middleware.Handler
 }
@@ -34,7 +34,7 @@ type VaneConfig struct {
 	ForceNoTrunc    bool
 	MaxKeepA        int
 
-	LogConfigs []*engine.LogConfig
+	LogConfig *llog.Config
 }
 
 func NewVane() *Vane {
@@ -44,7 +44,7 @@ func NewVane() *Vane {
 }
 
 func (v *Vane) Init() error {
-	l, err := engine.CreateLogger(v.LogConfigs)
+	l, err := engine.CreateLogger(v.LogConfig)
 	if err != nil {
 		return err
 	}

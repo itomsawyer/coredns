@@ -122,12 +122,19 @@ func Run() {
 	// Start your engines
 	instance, err := caddy.Start(corefile)
 	if err != nil {
+		if caddy.PidFile != "" {
+			os.Remove(caddy.PidFile)
+		}
 		mustLogFatal(err)
 	}
 
 	logVersion()
 	if !dnsserver.Quiet {
 		showVersion()
+	}
+
+	if caddy.PidFile != "" {
+		os.Remove(caddy.PidFile)
 	}
 
 	// Twiddle your thumbs

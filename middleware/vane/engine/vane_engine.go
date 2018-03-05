@@ -9,21 +9,21 @@ import (
 
 	"github.com/coredns/coredns/middleware"
 	"github.com/coredns/coredns/middleware/vane/models"
+	"github.com/itomsawyer/llog"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
 
 type VaneEngine struct {
-	Next       middleware.Handler
-	E          *Engine
-	DBName     string
-	DBHost     string
-	Logger     *logs.BeeLogger
-	LogConfigs []*LogConfig
-	LMConfig   *LinkManagerConfig
-	CtlHost    string
+	Next      middleware.Handler
+	E         *Engine
+	DBName    string
+	DBHost    string
+	Logger    *llog.Logger
+	LogConfig *llog.Config
+	LMConfig  *LinkManagerConfig
+	CtlHost   string
 
 	reloadLock sync.Mutex
 	cancel     chan struct{}
@@ -108,7 +108,7 @@ func (v *VaneEngine) ReloadHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (v *VaneEngine) initLogger() error {
-	l, err := CreateLogger(v.LogConfigs)
+	l, err := CreateLogger(v.LogConfig)
 	if err != nil {
 		return err
 	}

@@ -116,7 +116,7 @@ func parseVane(c *caddy.Controller) (vane *Vane, err error) {
 						return nil, err
 					}
 
-					vane.LogConfigs = append(vane.LogConfigs, lc)
+					vane.LogConfig = lc
 
 				case "debug":
 					args := c.RemainingArgs()

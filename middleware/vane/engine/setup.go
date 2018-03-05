@@ -103,7 +103,7 @@ func parseVaneEngine(c *caddy.Controller) (vane *VaneEngine, err error) {
 						return nil, err
 					}
 
-					vane.LogConfigs = append(vane.LogConfigs, lc)
+					vane.LogConfig = lc
 				case "lm":
 					lmc, err := ParseLinkManagerConfig(c)
 					if err != nil {

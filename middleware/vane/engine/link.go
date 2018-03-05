@@ -7,26 +7,19 @@ import (
 	"time"
 
 	"github.com/coredns/coredns/middleware/pkg/singleflight"
+	"github.com/itomsawyer/llog"
 
 	"supermq"
 
-	"github.com/astaxie/beego/logs"
 	"github.com/hashicorp/golang-lru"
 	"github.com/mholt/caddy"
 	"github.com/nsqio/go-nsq"
 )
 
-var (
-	LogLevelDebug   = nsq.LogLevelDebug
-	LogLevelInfo    = nsq.LogLevelInfo
-	LogLevelWarning = nsq.LogLevelWarning
-	LogLevelError   = nsq.LogLevelError
-)
-
 type LinkManager struct {
 	*lru.Cache
 	group  *singleflight.Group
-	logger *logs.BeeLogger
+	logger *llog.Logger
 
 	LinkStatusTTL  time.Duration
 	LinkUnknownTTL time.Duration
@@ -53,25 +46,38 @@ func NewLinkManager(cap int) (*LinkManager, error) {
 		group:          new(singleflight.Group),
 		LinkUnknownTTL: 10 * time.Second,
 		LinkStatusTTL:  2 * time.Minute,
-		logger:         logs.NewLogger(),
 	}
 
-	lm.logger.SetLevel(logs.LevelDebug)
 	return lm, nil
 }
 
-func (m *LinkManager) SetLogger(log *logs.BeeLogger) error {
+func (m *LinkManager) SetLogger(log *llog.Logger) error {
 	m.logger = log
 
-	// TODO set sender log
-	//if m.sender != nil {
-	//	m.sender
-	//}
+	if m.sender != nil {
+		m.sender.SetLogger(log, llogLevel2nsqLogLevel(log.Level()))
+	}
 
-	//if m.reader != nil {
-	//	m.reader.SetLogger(log, lg)
-	//}
+	if m.reader != nil {
+		m.reader.SetLogger(log, llogLevel2nsqLogLevel(log.Level()))
+	}
 	return nil
+}
+
+func llogLevel2nsqLogLevel(lv int) int {
+	if lv <= llog.Ldebug {
+		return int(nsq.LogLevelDebug)
+	}
+
+	if lv <= llog.Linfo {
+		return int(nsq.LogLevelInfo)
+	}
+
+	if lv <= llog.Lwarn {
+		return int(nsq.LogLevelWarning)
+	}
+
+	return int(nsq.LogLevelError)
 }
 
 func (m *LinkManager) handlerFunc() supermq.Handle {
@@ -217,7 +223,7 @@ type LinkManagerConfig struct {
 	readHosts      []string
 	LinkStatusTTL  time.Duration
 	LinkUnknownTTL time.Duration
-	LogConfigs     []*LogConfig
+	LogConfig      *llog.Config
 }
 
 func (c *LinkManagerConfig) CreateLinkManager() (*LinkManager, error) {
@@ -228,7 +234,7 @@ func (c *LinkManagerConfig) CreateLinkManager() (*LinkManager, error) {
 
 	lm.LinkUnknownTTL = c.LinkUnknownTTL
 	lm.LinkStatusTTL = c.LinkStatusTTL
-	if logger, err := CreateLogger(c.LogConfigs); err != nil {
+	if logger, err := CreateLogger(c.LogConfig); err != nil {
 		return nil, err
 	} else {
 		if err := lm.SetLogger(logger); err != nil {
@@ -375,7 +381,7 @@ func ParseLinkManagerConfig(c *caddy.Controller) (*LinkManagerConfig, error) {
 				return nil, err
 			}
 
-			lmconfig.LogConfigs = append(lmconfig.LogConfigs, lc)
+			lmconfig.LogConfig = lc
 		default:
 			return nil, c.Err("directive " + c.Val() + " is unknown")
 		}
