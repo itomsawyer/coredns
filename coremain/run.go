@@ -128,13 +128,15 @@ func Run() {
 		mustLogFatal(err)
 	}
 
+	defer func() {
+		if caddy.PidFile != "" {
+			os.Remove(caddy.PidFile)
+		}
+	}()
+
 	logVersion()
 	if !dnsserver.Quiet {
 		showVersion()
-	}
-
-	if caddy.PidFile != "" {
-		os.Remove(caddy.PidFile)
 	}
 
 	// Twiddle your thumbs
