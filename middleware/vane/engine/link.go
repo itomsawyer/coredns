@@ -4,6 +4,7 @@ import (
 	"strconv"
 	//"sync/atomic"
 	"encoding/json"
+	"sync"
 	"time"
 
 	"github.com/coredns/coredns/middleware/pkg/singleflight"
@@ -15,6 +16,10 @@ import (
 	"github.com/mholt/caddy"
 	"github.com/nsqio/go-nsq"
 )
+
+var lmCache *lru.Cache
+var lmOnce sync.Once
+var lock sync.Mutex
 
 type LinkManager struct {
 	*lru.Cache
@@ -31,24 +36,31 @@ type LinkManager struct {
 	sender    *supermq.MProducer
 }
 
-func NewLinkManager(cap int) (*LinkManager, error) {
+func NewLinkManager(cap int) (lm *LinkManager, err error) {
 	if cap <= 0 {
 		cap = 1000
 	}
 
-	c, err := lru.New(cap)
+	lock.Lock()
+	defer lock.Unlock()
+
+	lmOnce.Do(func() {
+		lmCache, err = lru.New(cap)
+	})
+
 	if err != nil {
 		return nil, err
 	}
 
-	lm := &LinkManager{
-		Cache:          c,
+	lm = &LinkManager{
+		Cache:          lmCache,
 		group:          new(singleflight.Group),
 		LinkUnknownTTL: 10 * time.Second,
 		LinkStatusTTL:  2 * time.Minute,
 	}
 
-	return lm, nil
+	lm.Cache.SetLen(cap)
+	return
 }
 
 func (m *LinkManager) SetLogger(log *llog.Logger) error {
