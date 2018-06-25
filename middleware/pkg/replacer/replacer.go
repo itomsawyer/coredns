@@ -68,6 +68,13 @@ func New(r *dns.Msg, rr *dnsrecorder.Recorder, emptyValue string) Replacer {
 		rep.replacements["{rcode}"] = rcode
 		rep.replacements["{rsize}"] = strconv.Itoa(rr.Len)
 		rep.replacements["{duration}"] = time.Since(rr.Start).String()
+		rep.replacements["{answer.nl}"] = ""
+		if rr.Labels != nil {
+			if v, ok := rr.Labels["bestNetLink"]; ok {
+				rep.replacements["{answer.nl}"] = v
+			}
+		}
+
 	}
 
 	// Header placeholders (case-insensitive)

@@ -37,6 +37,26 @@ type VaneConfig struct {
 	LogConfig *llog.Config
 }
 
+type ResponseWriterWrapper struct {
+	w  dns.ResponseWriter
+	wl middleware.LabelResponseWriter
+}
+
+func NewResponseWriterWrapper(w dns.ResponseWriter) *ResponseWriterWrapper {
+	if wl, ok := w.(middleware.LabelResponseWriter); ok {
+		return &ResponseWriterWrapper{wl: wl}
+	}
+	return &ResponseWriterWrapper{w: w}
+}
+
+func (r *ResponseWriterWrapper) WriteMsgWithLabels(res *dns.Msg, labels map[string]string) error {
+	if r.wl != nil {
+		return r.wl.WriteMsgWithLabels(res, labels)
+	}
+
+	return r.w.WriteMsg(res)
+}
+
 func NewVane() *Vane {
 	return &Vane{
 		RcodePriority: NewRcodePriority(),
@@ -64,7 +84,7 @@ func (v *Vane) Destroy() error {
 
 func (v *Vane) Name() string { return "vane" }
 
-func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (int, error) {
+func (v *Vane) ServeDNS(ctx context.Context, wr dns.ResponseWriter, r *dns.Msg) (int, error) {
 	var (
 		cip net.IP
 		i   int
@@ -83,13 +103,14 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	}
 
 	q := r.Question[0]
-	state := request.Request{W: w, Req: r}
+	state := request.Request{W: wr, Req: r}
+	w := NewResponseWriterWrapper(wr)
 
 	//TODO MayBe check vane_engine is start at first startup
 	value := ctx.Value("vane_engine")
 	e, ok := value.(*engine.Engine)
 	if !ok || e == nil {
-		return middleware.NextOrFailure(v.Name(), v.Next, ctx, w, r)
+		return middleware.NextOrFailure(v.Name(), v.Next, ctx, wr, r)
 	}
 	v.Logger.Debug("query domain %s", q.Name)
 
@@ -114,7 +135,7 @@ func (v *Vane) ServeDNS(ctx context.Context, w dns.ResponseWriter, r *dns.Msg) (
 	if edns.HasClientSubnet(r) && !v.KeepUpstreamECS {
 		req := r.Copy()
 		edns.RemoveClientSubnetIfExist(req)
-		state = request.Request{W: w, Req: req}
+		state = request.Request{W: wr, Req: req}
 	}
 
 	if len(clientSets) == 0 {
@@ -222,7 +243,7 @@ try_again:
 						replyMsg.Extra = []dns.RR{}
 					}
 
-					w.WriteMsg(replyMsg)
+					w.WriteMsgWithLabels(replyMsg, nil)
 					return 0, nil
 				}
 
@@ -250,7 +271,9 @@ try_again:
 				}
 			}
 
-			bestRoutePrio := math.MaxInt32
+			var bestRoutePrio int = math.MaxInt32
+			var bestNetLink string = ""
+
 			for _, tmpView := range views {
 				v.Logger.Debug("current routeset %d %s", tmpView.RouteSetID, tmpView.RouteSetName)
 				for _, rr := range rrset {
@@ -289,12 +312,17 @@ try_again:
 
 					if route.Priority < bestRoutePrio {
 						bestRoutePrio = route.Priority
+						bestNetLink = route.NetLinkSetName
 						better = better[:0]
 						v.Logger.Debug("better route found with priority %d", route.Priority)
 					}
 
 					v.Logger.Debug("ip addr %s has been accepted for %s", a.A, route.OutLink.Addr)
 					a.Hdr.Name = q.Name
+
+					if bestNetLink == "" {
+						bestNetLink = route.NetLinkSetName
+					}
 					better = append(better, a)
 				}
 
@@ -333,7 +361,7 @@ try_again:
 			if v.Debug {
 				v.Logger.Debug("Write anwser to client: \n%v", replyMsg)
 			}
-			w.WriteMsg(replyMsg)
+			w.WriteMsgWithLabels(replyMsg, map[string]string{"bestNetLink": bestNetLink})
 			return 0, nil
 		}
 
@@ -355,7 +383,27 @@ try_again:
 	if replyMsg != nil {
 		if bestrc != dns.RcodeSuccess {
 			//return the best effort answer we get
-			w.WriteMsg(replyMsg)
+			var labels map[string]string
+			for _, rr := range replyMsg.Answer {
+				a, ok := rr.(*dns.A)
+				if !ok {
+					continue
+				}
+				nl, err := e.GetNetLink(a.A)
+				if err != nil {
+					continue
+				}
+
+				dl, err := e.GetDomainLink(engine.DefaultDomainPool.ID, nl.ID)
+				if err != nil {
+					continue
+				}
+
+				labels = map[string]string{"bestNetLink": dl.NetLinkSetName}
+				break
+			}
+
+			w.WriteMsgWithLabels(replyMsg, labels)
 			return 0, nil
 		}
 
@@ -364,7 +412,7 @@ try_again:
 		v.Logger.Warn("[%04d] cannot find available answer for client: %v domain: %s", warnNoGoodAnswer, cip, q.Name)
 		replyMsg.Answer = nil
 		replyMsg.Ns = nil
-		w.WriteMsg(replyMsg)
+		w.WriteMsgWithLabels(replyMsg, nil)
 		return 0, nil
 	}
 

@@ -15,10 +15,11 @@ import (
 // with that default status code.
 type Recorder struct {
 	dns.ResponseWriter
-	Rcode int
-	Len   int
-	Msg   *dns.Msg
-	Start time.Time
+	Rcode  int
+	Len    int
+	Msg    *dns.Msg
+	Start  time.Time
+	Labels map[string]string
 }
 
 // New makes and returns a new Recorder,
@@ -69,6 +70,11 @@ func (r *Recorder) WriteMsg(res *dns.Msg) error {
 	r.Len += res.Len()
 	r.Msg = res
 	return r.ResponseWriter.WriteMsg(res)
+}
+
+func (r *Recorder) WriteMsgWithLabels(res *dns.Msg, labels map[string]string) error {
+	r.Labels = labels
+	return r.WriteMsg(res)
 }
 
 // Write is a wrapper that records the length of the message that gets written.

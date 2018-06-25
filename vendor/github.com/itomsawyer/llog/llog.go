@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 
 	"github.com/natefinch/lumberjack"
 )
@@ -64,7 +65,8 @@ func (l *Logger) Finest(format string, args ...interface{}) {
 		return
 	}
 
-	l.Printf(format, args...)
+	f, a := callerSource(format, args)
+	l.Printf(f, a...)
 }
 
 func (l *Logger) Fine(format string, args ...interface{}) {
@@ -72,7 +74,8 @@ func (l *Logger) Fine(format string, args ...interface{}) {
 		return
 	}
 
-	l.Printf(format, args...)
+	f, a := callerSource(format, args)
+	l.Printf(f, a...)
 }
 
 func (l *Logger) Debug(format string, args ...interface{}) {
@@ -80,7 +83,8 @@ func (l *Logger) Debug(format string, args ...interface{}) {
 		return
 	}
 
-	l.Printf(format, args...)
+	f, a := callerSource(format, args)
+	l.Printf(f, a...)
 }
 
 func (l *Logger) Info(format string, args ...interface{}) {
@@ -88,7 +92,8 @@ func (l *Logger) Info(format string, args ...interface{}) {
 		return
 	}
 
-	l.Printf(format, args...)
+	f, a := callerSource(format, args)
+	l.Printf(f, a...)
 }
 
 func (l *Logger) Warn(format string, args ...interface{}) {
@@ -96,7 +101,8 @@ func (l *Logger) Warn(format string, args ...interface{}) {
 		return
 	}
 
-	l.Printf(format, args...)
+	f, a := callerSource(format, args)
+	l.Printf(f, a...)
 }
 
 func (l *Logger) Error(format string, args ...interface{}) {
@@ -104,7 +110,8 @@ func (l *Logger) Error(format string, args ...interface{}) {
 		return
 	}
 
-	l.Printf(format, args...)
+	f, a := callerSource(format, args)
+	l.Printf(f, a...)
 }
 
 func (l *Logger) Critical(format string, args ...interface{}) {
@@ -112,7 +119,8 @@ func (l *Logger) Critical(format string, args ...interface{}) {
 		return
 	}
 
-	l.Printf(format, args...)
+	f, a := callerSource(format, args)
+	l.Printf(f, a...)
 }
 
 func (l *Logger) SetLevel(level string) error {
@@ -127,7 +135,7 @@ func (l *Logger) SetLevel(level string) error {
 }
 
 func New(lc Config, flag int) (*Logger, error) {
-	flag = flag | log.LstdFlags | log.Lshortfile
+	flag = flag | log.LstdFlags
 
 	lv, ok := LogLevel[lc.Level]
 	if !ok {
@@ -163,4 +171,28 @@ func New(lc Config, flag int) (*Logger, error) {
 	lg.Closer = lj
 
 	return lg, nil
+}
+
+func callerSource(format string, args []interface{}) (string, []interface{}) {
+	// Determine caller func
+	_, file, lineno, ok := runtime.Caller(2)
+	if !ok {
+		file = "???"
+		lineno = 0
+	}
+
+	short := file
+	for i := len(file) - 1; i > 0; i-- {
+		if file[i] == '/' {
+			short = file[i+1:]
+			break
+		}
+	}
+	file = short
+
+	src := fmt.Sprintf("[%s:%d]", file, lineno)
+	format = "%s " + format
+	a := []interface{}{src}
+	a = append(a, args...)
+	return format, a
 }

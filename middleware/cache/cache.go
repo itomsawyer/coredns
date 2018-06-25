@@ -76,6 +76,9 @@ type ResponseWriter struct {
 
 // WriteMsg implements the dns.ResponseWriter interface.
 func (c *ResponseWriter) WriteMsg(res *dns.Msg) error {
+	return c.WriteMsgWithLabels(res, nil)
+}
+func (c *ResponseWriter) WriteMsgWithLabels(res *dns.Msg, labels map[string]string) error {
 	do := false
 	mt, opt := response.Typify(res)
 	if opt != nil {
@@ -113,6 +116,9 @@ func (c *ResponseWriter) WriteMsg(res *dns.Msg) error {
 
 	setMsgTTL(res, uint32(duration.Seconds()))
 
+	if w, ok := c.ResponseWriter.(middleware.LabelResponseWriter); ok {
+		return w.WriteMsgWithLabels(res, labels)
+	}
 	return c.ResponseWriter.WriteMsg(res)
 }
 

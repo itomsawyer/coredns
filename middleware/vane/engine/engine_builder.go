@@ -278,9 +278,11 @@ func (b *EngineBuilder) BuildRoute(e *Engine) error {
 				NetLinkSetID: v.NetlinksetId,
 			},
 
-			OutLink:  ot,
-			Priority: v.RoutePriority,
-			Score:    v.RouteScore,
+			RouteSetName:   v.RoutesetName,
+			NetLinkSetName: v.NetlinksetName,
+			OutLink:        ot,
+			Priority:       v.RoutePriority,
+			Score:          v.RouteScore,
 		}
 
 		e.AddRoute(r)

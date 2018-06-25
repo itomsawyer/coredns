@@ -14,5 +14,5 @@ func TestNewConsoleLog(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	lg.Debug("test")
+	lg.Debug("test %d", 11)
 }

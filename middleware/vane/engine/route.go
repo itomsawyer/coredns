@@ -20,9 +20,11 @@ func (m RouteMap) AddRoute(r Route) {
 
 type Route struct {
 	RouteKey
-	OutLink  OutLink
-	Priority int
-	Score    int
+	RouteSetName   string
+	NetLinkSetName string
+	OutLink        OutLink
+	Priority       int
+	Score          int
 }
 
 func NewRoute(routeset_id int, netlinkset_id int, o OutLink) Route {

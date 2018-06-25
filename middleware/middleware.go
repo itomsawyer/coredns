@@ -10,6 +10,11 @@ import (
 	"golang.org/x/net/context"
 )
 
+type LabelResponseWriter interface {
+	dns.ResponseWriter
+	WriteMsgWithLabels(*dns.Msg, map[string]string) error
+}
+
 type (
 	// Middleware is the middle layer which represents the traditional
 	// idea of middleware: it chains one Handler to the next by being
