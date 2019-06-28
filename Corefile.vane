@@ -1,0 +1,43 @@
+.:8053 {
+    prometheus localhost:9253
+    vane_engine {
+        db root:@tcp(127.0.0.1:3306)/iwg
+        log {
+            level info
+            filename logs/engine.log
+        }
+
+    }
+
+    vane {
+        debug yes
+
+        log {
+            level debug
+            filename stdout
+        }
+
+        upstream_timeout 300ms
+        keep_cname_chain no
+        keep_upstream_ecs no
+        max_keep_a 2
+    }
+
+#log logs/query.log {
+#        max_age 10
+#    }
+
+    log stdout 
+#errors logs/error.log {
+#        max_backups 10
+#        max_size  128
+#    }
+    errors stdout
+
+    cache . {
+        #success 50000 300  ## positive, cap, maxTTL
+        success 50000 100 600
+        denial  5000  10
+        prefetch 1 1m 90%
+    }
+}
